@@ -1,17 +1,25 @@
 package woozlabs.echo.domain.member.entity;
 
-import jakarta.persistence.*;
-import lombok.*;
-import woozlabs.echo.domain.echo.entity.EmailTemplate;
-import woozlabs.echo.domain.contactGroup.entity.AccountContactGroup;
-import woozlabs.echo.domain.echo.entity.UserSidebarConfig;
-import woozlabs.echo.domain.signature.Signature;
-import woozlabs.echo.global.common.entity.BaseEntity;
-
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import woozlabs.echo.domain.contactGroup.entity.AccountContactGroup;
+import woozlabs.echo.domain.echo.entity.EmailTemplate;
+import woozlabs.echo.domain.echo.entity.UserBookmark;
+import woozlabs.echo.domain.signature.Signature;
+import woozlabs.echo.global.common.entity.BaseEntity;
 
 @Entity
 @Getter
@@ -21,7 +29,8 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class Account extends BaseEntity {
 
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String uid;
@@ -42,8 +51,8 @@ public class Account extends BaseEntity {
     @OneToMany(mappedBy = "account", cascade = CascadeType.ALL)
     private List<EmailTemplate> emailTemplates = new ArrayList<>();
 
-    @OneToOne(mappedBy = "account", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    private UserSidebarConfig sidebarConfig;
+    @OneToMany(mappedBy = "account", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<UserBookmark> bookmarks = new ArrayList<>();
 
     @OneToMany(mappedBy = "account", cascade = CascadeType.ALL)
     private List<AccountContactGroup> accountContactGroups = new ArrayList<>();
