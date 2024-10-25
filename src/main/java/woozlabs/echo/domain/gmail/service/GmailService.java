@@ -663,15 +663,28 @@ public class GmailService {
             String fromEmailAddress = profile.getEmailAddress();
             request.setFromEmailAddress(fromEmailAddress);
 
-            MimeMessage mimeMessage = createEmail(request);
             // set reply message
             Message lastMessage = gmailService.users().messages().get(USER_ID, messageId).execute();
-            mimeMessage.setHeader("In-Reply-To", lastMessage.getPayload().getHeaders().stream()
-                    .filter(header -> header.getName().equals("Message-ID"))
+            String originalMessageId = lastMessage.getPayload().getHeaders().stream()
+                    .filter(header -> header.getName().equalsIgnoreCase("Message-ID"))
                     .findFirst()
                     .map(MessagePartHeader::getValue)
-                    .orElse(""));
+                    .orElse("");
+            // 제목에 Re: 추가 (이미 Re:가 없는 경우에만)
+            if (!request.getSubject().toLowerCase().startsWith("re:")) {
+                request.setSubject("Re: " + request.getSubject());
+            }
+            MimeMessage mimeMessage = createEmail(request);
+
+            // 답장 관련 헤더 설정
+            if (!originalMessageId.isEmpty()) {
+                mimeMessage.setHeader("In-Reply-To", originalMessageId);
+                mimeMessage.setHeader("References", originalMessageId);
+            }
+
             Message message = createMessage(mimeMessage);
+            message.setThreadId(lastMessage.getThreadId());
+
             gmailService.users().messages().send(USER_ID, message).execute();
         }catch (Exception e) {
             throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE,
