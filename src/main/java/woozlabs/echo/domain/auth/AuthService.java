@@ -3,6 +3,11 @@ package woozlabs.echo.domain.auth;
 import com.google.firebase.auth.FirebaseAuthException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -24,12 +29,6 @@ import woozlabs.echo.global.exception.ErrorCode;
 import woozlabs.echo.global.utils.FirebaseTokenVerifier;
 import woozlabs.echo.global.utils.GoogleOAuthUtils;
 
-import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-
 @Slf4j
 @Service
 @Transactional(readOnly = true)
@@ -45,7 +44,8 @@ public class AuthService {
 
     private static final String GOOGLE_PROVIDER = "google";
 
-    private void constructAndRedirect(HttpServletResponse response, String customToken, String displayName, String profileImageUrl, String email, boolean isAddAccount) {
+    private void constructAndRedirect(HttpServletResponse response, String customToken, String displayName,
+                                      String profileImageUrl, String email, boolean isAddAccount) {
         String baseUrl = isAddAccount ? GlobalConstant.AUTH_ADD_ACCOUNT_DOMAIN : GlobalConstant.AUTH_SIGN_IN_DOMAIN;
         String url = UriComponentsBuilder.fromHttpUrl(baseUrl)
                 .queryParam("customToken", customToken)
@@ -61,7 +61,8 @@ public class AuthService {
         }
     }
 
-    private Account createNewAccount(String providerId, String displayName, String email, String profileImageUrl, String accessToken, String refreshToken, String uuid, String provider) {
+    private Account createNewAccount(String providerId, String displayName, String email, String profileImageUrl,
+                                     String accessToken, String refreshToken, String uuid, String provider) {
         log.info("Creating new account with providerId: {}, email: {}", providerId, email);
         return Account.builder()
                 .uid(uuid)
@@ -90,7 +91,8 @@ public class AuthService {
     }
 
     @Transactional
-    public void handleGoogleCallback(String code, HttpServletRequest request, HttpServletResponse response) throws FirebaseAuthException {
+    public void handleGoogleCallback(String code, HttpServletRequest request, HttpServletResponse response)
+            throws FirebaseAuthException {
         Map<String, Object> userInfo = googleOAuthUtils.getGoogleUserInfoAndTokens(code);
         String providerId = (String) userInfo.get("id");
 
@@ -127,7 +129,8 @@ public class AuthService {
             return existingAccount;
         } else {
             uuid = UUID.nameUUIDFromBytes(email.getBytes(StandardCharsets.UTF_8)).toString();
-            Account newAccount = createNewAccount(providerId, displayName, email, profileImageUrl, accessToken, refreshToken, uuid, GOOGLE_PROVIDER);
+            Account newAccount = createNewAccount(providerId, displayName, email, profileImageUrl, accessToken,
+                    refreshToken, uuid, GOOGLE_PROVIDER);
             accountRepository.save(newAccount);
             log.info("Created new account with UID: {}", newAccount.getUid());
             return newAccount;
@@ -135,7 +138,8 @@ public class AuthService {
     }
 
     @Transactional
-    public void handleExistingAccount(Account existingAccount, Map<String, Object> userInfo, HttpServletRequest request, HttpServletResponse response) throws FirebaseAuthException {
+    public void handleExistingAccount(Account existingAccount, Map<String, Object> userInfo, HttpServletRequest request,
+                                      HttpServletResponse response) throws FirebaseAuthException {
         updateAccountInfo(existingAccount, userInfo);
 
         Optional<String> cookieTokenOpt = AuthCookieUtils.getCookieValue(request);
@@ -149,12 +153,17 @@ public class AuthService {
             addNewAccountToExistingMember(cookieTokenMember, userInfo, response);
         } else {
             log.info("No token found in cookie. Updating existing account and redirecting.");
+            existingAccount.setAccessToken((String) userInfo.get("access_token"));
+            existingAccount.setAccessTokenFetchedAt(LocalDateTime.now());
             accountRepository.save(existingAccount);
-            constructAndRedirect(response, firebaseUtils.createCustomToken(existingAccount.getUid()), (String) userInfo.get("name"), (String) userInfo.get("picture"), (String) userInfo.get("email"), false);
+            constructAndRedirect(response, firebaseUtils.createCustomToken(existingAccount.getUid()),
+                    (String) userInfo.get("name"), (String) userInfo.get("picture"), (String) userInfo.get("email"),
+                    false);
         }
     }
 
-    public void handleNewAccount(Map<String, Object> userInfo, HttpServletRequest request, HttpServletResponse response) throws FirebaseAuthException {
+    public void handleNewAccount(Map<String, Object> userInfo, HttpServletRequest request, HttpServletResponse response)
+            throws FirebaseAuthException {
         log.info("Handling new account for user: {}", userInfo.get("email"));
         Optional<String> cookieTokenOpt = AuthCookieUtils.getCookieValue(request);
 
@@ -178,7 +187,8 @@ public class AuthService {
     }
 
     @Transactional
-    public void addNewAccountToExistingMember(Member member, Map<String, Object> userInfo, HttpServletResponse response) throws FirebaseAuthException {
+    public void addNewAccountToExistingMember(Member member, Map<String, Object> userInfo, HttpServletResponse response)
+            throws FirebaseAuthException {
         log.info("Adding new account to existing member.");
         Account newAccount = createOrUpdateAccount(userInfo);
 
@@ -199,11 +209,13 @@ public class AuthService {
         memberRepository.save(member);
         accountRepository.save(newAccount);
 
-        constructAndRedirect(response, firebaseUtils.createCustomToken(newAccount.getUid()), (String) userInfo.get("name"), (String) userInfo.get("picture"), (String) userInfo.get("email"), true);
+        constructAndRedirect(response, firebaseUtils.createCustomToken(newAccount.getUid()),
+                (String) userInfo.get("name"), (String) userInfo.get("picture"), (String) userInfo.get("email"), true);
     }
 
     @Transactional
-    public void createNewMemberWithAccount(Map<String, Object> userInfo, HttpServletResponse response) throws FirebaseAuthException {
+    public void createNewMemberWithAccount(Map<String, Object> userInfo, HttpServletResponse response)
+            throws FirebaseAuthException {
         log.info("Creating new member with new account for user: {}", userInfo.get("email"));
         Account account = createOrUpdateAccount(userInfo);
 
@@ -231,6 +243,7 @@ public class AuthService {
         log.info("Created new Member with a new account. Account UID: {}", account.getUid());
 
         String customToken = firebaseUtils.createCustomToken(account.getUid());
-        constructAndRedirect(response, customToken, (String) userInfo.get("name"), (String) userInfo.get("picture"), (String) userInfo.get("email"), false);
+        constructAndRedirect(response, customToken, (String) userInfo.get("name"), (String) userInfo.get("picture"),
+                (String) userInfo.get("email"), false);
     }
 }
