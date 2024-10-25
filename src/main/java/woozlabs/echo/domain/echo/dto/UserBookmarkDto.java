@@ -9,8 +9,9 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserBookmarkConfigDto {
+public class UserBookmarkDto {
 
     private String query;
     private String title;
+    private String icon;
 }
