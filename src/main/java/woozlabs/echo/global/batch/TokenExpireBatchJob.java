@@ -1,5 +1,7 @@
 package woozlabs.echo.global.batch;
 
+import java.time.LocalDateTime;
+import java.util.Collections;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.Job;
@@ -20,9 +22,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 import woozlabs.echo.domain.member.entity.Account;
 import woozlabs.echo.domain.member.repository.AccountRepository;
 
-import java.time.LocalDateTime;
-import java.util.Collections;
-
 @Slf4j
 @Configuration
 @EnableBatchProcessing
@@ -34,6 +33,7 @@ public class TokenExpireBatchJob {
     private final AccountRepository accountRepository;
 
     private static final int CHUNK_SIZE = 10;
+    private static final int EXPIRE_PERIOD = 3;
 
     @Bean
     public Job expireTokenJob() {
@@ -55,7 +55,7 @@ public class TokenExpireBatchJob {
     @Bean
     @StepScope
     public RepositoryItemReader<Account> expireTokenReader() {
-        LocalDateTime cutoffTime = LocalDateTime.now().minusDays(10);
+        LocalDateTime cutoffTime = LocalDateTime.now().minusDays(EXPIRE_PERIOD);
         log.info("TokenExpireBatchJob: Cutoff time for findByLastLoginAtBefore query: {}", cutoffTime);
 
         return new RepositoryItemReaderBuilder<Account>()
