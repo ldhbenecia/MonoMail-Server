@@ -30,6 +30,12 @@ public class UserBookmarkService {
         Account account = accountRepository.findByUid(activeAccountUid)
                 .orElseThrow(() -> new CustomErrorException(ErrorCode.NOT_FOUND_ACCOUNT_ERROR_MESSAGE));
 
+        boolean exists = userBookmarkRepository.findByAccountAndQuery(account, userBookmarkConfigDto.getQuery())
+                .isPresent();
+        if (exists) {
+            throw new CustomErrorException(ErrorCode.DUPLICATE_QUERY_ERROR_MESSAGE);
+        }
+
         UserBookmark userBookmark = new UserBookmark();
         userBookmark.setAccount(account);
         userBookmark.setQuery(userBookmarkConfigDto.getQuery());
