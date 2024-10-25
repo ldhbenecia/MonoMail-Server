@@ -164,9 +164,9 @@ public class GmailController {
 
     @PostMapping("/api/v1/gmail/messages/send")
     public ResponseEntity<?> sendMessage(HttpServletRequest httpServletRequest,
-                                                   @RequestParam("mailTo") String toEmailAddresses,
-                                                   @RequestParam(value = "cc", required = false, defaultValue = "") String ccEmailAddresses,
-                                                   @RequestParam(value = "bcc", required = false, defaultValue = "") String bccEmailAddresses,
+                                                   @RequestParam("mailto") String toEmailAddresses,
+                                                   @RequestParam(value = "cc", required = false) String ccEmailAddresses,
+                                                   @RequestParam(value = "bcc", required = false) String bccEmailAddresses,
                                                    @RequestParam("subject") String subject,
                                                    @RequestParam("body") String bodyText,
                                                    @RequestParam(value = "files", required = false) List<MultipartFile> files,
@@ -177,8 +177,12 @@ public class GmailController {
             String accessToken = gmailUtility.getActiveAccountAccessToken(httpServletRequest, aAUid);
             GmailMessageSendRequest request = new GmailMessageSendRequest();
             List<String> emailList = Arrays.asList(toEmailAddresses.split(","));
-            List<String> ccList = Arrays.asList(ccEmailAddresses.split(","));
-            List<String> bccList = Arrays.asList(bccEmailAddresses.split(","));
+            List<String> ccList = ccEmailAddresses != null ?
+                    Arrays.asList(ccEmailAddresses.split(",")) :
+                    new ArrayList<>();
+            List<String> bccList = bccEmailAddresses != null ?
+                    Arrays.asList(bccEmailAddresses.split(",")):
+                    new ArrayList<>();
             request.setToEmailAddresses(emailList);
             request.setCcEmailAddresses(ccList);
             request.setBccEmailAddresses(bccList);
@@ -195,15 +199,16 @@ public class GmailController {
             gmailService.sendUserEmailMessage(accessToken, request);
             return new ResponseEntity<>(HttpStatus.CREATED);
         }catch (Exception e){
+            e.printStackTrace();
             throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE, ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE.getMessage());
         }
     }
 
     @PostMapping("/api/v1/gmail/messages/send/reply")
     public ResponseEntity<?> sendReply(HttpServletRequest httpServletRequest,
-                                       @RequestParam("mailTo") String toEmailAddresses,
-                                       @RequestParam(value = "cc", required = false, defaultValue = "") String ccEmailAddresses,
-                                       @RequestParam(value = "bcc", required = false, defaultValue = "") String bccEmailAddresses,
+                                       @RequestParam("mailto") String toEmailAddresses,
+                                       @RequestParam(value = "cc", required = false) String ccEmailAddresses,
+                                       @RequestParam(value = "bcc", required = false) String bccEmailAddresses,
                                        @RequestParam("subject") String subject,
                                        @RequestParam("body") String bodyText,
                                        @RequestParam("messageId") String messageId,
@@ -215,8 +220,12 @@ public class GmailController {
             String accessToken = gmailUtility.getActiveAccountAccessToken(httpServletRequest, aAUid);
             GmailMessageSendRequest request = new GmailMessageSendRequest();
             List<String> emailList = Arrays.asList(toEmailAddresses.split(","));
-            List<String> ccList = Arrays.asList(ccEmailAddresses.split(","));
-            List<String> bccList = Arrays.asList(bccEmailAddresses.split(","));
+            List<String> ccList = ccEmailAddresses != null ?
+                    Arrays.asList(ccEmailAddresses.split(",")) :
+                    new ArrayList<>();
+            List<String> bccList = bccEmailAddresses != null ?
+                    Arrays.asList(bccEmailAddresses.split(",")):
+                    new ArrayList<>();
             request.setToEmailAddresses(emailList);
             request.setCcEmailAddresses(ccList);
             request.setBccEmailAddresses(bccList);
@@ -241,9 +250,9 @@ public class GmailController {
 
     @PostMapping("/api/v1/gmail/drafts/create")
     public ResponseEntity<?> createDraft(HttpServletRequest httpServletRequest,
-                                                   @RequestParam("mailTo") String toEmailAddresses,
-                                                   @RequestParam(value = "cc", required = false, defaultValue = "") String ccEmailAddresses,
-                                                   @RequestParam(value = "bcc", required = false, defaultValue = "") String bccEmailAddresses,
+                                                   @RequestParam("mailto") String toEmailAddresses,
+                                                   @RequestParam(value = "cc", required = false) String ccEmailAddresses,
+                                                   @RequestParam(value = "bcc", required = false) String bccEmailAddresses,
                                                    @RequestParam("subject") String subject,
                                                    @RequestParam("body") String bodyText,
                                                    @RequestParam(value = "files", required = false) List<MultipartFile> files,
@@ -254,8 +263,12 @@ public class GmailController {
             String accessToken = gmailUtility.getActiveAccountAccessToken(httpServletRequest, aAUid);
             GmailDraftCommonRequest request = new GmailDraftCommonRequest();
             List<String> emailList = Arrays.asList(toEmailAddresses.split(","));
-            List<String> ccList = Arrays.asList(ccEmailAddresses.split(","));
-            List<String> bccList = Arrays.asList(bccEmailAddresses.split(","));
+            List<String> ccList = ccEmailAddresses != null ?
+                    Arrays.asList(ccEmailAddresses.split(",")) :
+                    new ArrayList<>();
+            List<String> bccList = bccEmailAddresses != null ?
+                    Arrays.asList(bccEmailAddresses.split(",")):
+                    new ArrayList<>();
             request.setToEmailAddresses(emailList);
             request.setCcEmailAddresses(ccList);
             request.setBccEmailAddresses(bccList);
@@ -279,9 +292,9 @@ public class GmailController {
     @PutMapping("/api/v1/gmail/drafts/{id}")
     public ResponseEntity<?> modifyDraft(HttpServletRequest httpServletRequest,
                                                    @PathVariable("id") String id,
-                                                   @RequestParam("mailTo") String toEmailAddresses,
-                                                   @RequestParam(value = "cc", required = false, defaultValue = "") String ccEmailAddresses,
-                                                   @RequestParam(value = "bcc", required = false, defaultValue = "") String bccEmailAddresses,
+                                                   @RequestParam("mailto") String toEmailAddresses,
+                                                   @RequestParam(value = "cc", required = false) String ccEmailAddresses,
+                                                   @RequestParam(value = "bcc", required = false) String bccEmailAddresses,
                                                    @RequestParam("subject") String subject,
                                                    @RequestParam("body") String bodyText,
                                                    @RequestParam(value = "files", required = false) List<MultipartFile> files,
@@ -293,8 +306,12 @@ public class GmailController {
             GmailDraftCommonRequest request = new GmailDraftCommonRequest();
             List<String> emailList = Arrays.asList(toEmailAddresses.split(","));
             request.setToEmailAddresses(emailList);
-            List<String> ccList = Arrays.asList(ccEmailAddresses.split(","));
-            List<String> bccList = Arrays.asList(bccEmailAddresses.split(","));
+            List<String> ccList = ccEmailAddresses != null ?
+                    Arrays.asList(ccEmailAddresses.split(",")) :
+                    new ArrayList<>();
+            List<String> bccList = bccEmailAddresses != null ?
+                    Arrays.asList(bccEmailAddresses.split(",")):
+                    new ArrayList<>();
             request.setSubject(subject);
             request.setCcEmailAddresses(ccList);
             request.setBccEmailAddresses(bccList);
@@ -316,10 +333,10 @@ public class GmailController {
 
     @PostMapping(value = "/api/v1/gmail/drafts/send", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> sendDraft(HttpServletRequest httpServletRequest,
-                                                   @RequestParam("mailTo") String toEmailAddresses,
+                                                   @RequestParam("mailto") String toEmailAddresses,
                                                    @RequestParam("subject") String subject,
-                                                   @RequestParam(value = "cc", required = false, defaultValue = "") String ccEmailAddresses,
-                                                   @RequestParam(value = "bcc", required = false, defaultValue = "") String bccEmailAddresses,
+                                                   @RequestParam(value = "cc", required = false) String ccEmailAddresses,
+                                                   @RequestParam(value = "bcc", required = false) String bccEmailAddresses,
                                                    @RequestParam("body") String bodyText,
                                                    @RequestParam(value = "files", required = false) List<MultipartFile> files,
                                                    @RequestParam("aAUid") String aAUid) {
@@ -329,8 +346,12 @@ public class GmailController {
             String accessToken = gmailUtility.getActiveAccountAccessToken(httpServletRequest, aAUid);
             GmailDraftCommonRequest request = new GmailDraftCommonRequest();
             List<String> emailList = Arrays.asList(toEmailAddresses.split(","));
-            List<String> ccList = Arrays.asList(ccEmailAddresses.split(","));
-            List<String> bccList = Arrays.asList(bccEmailAddresses.split(","));
+            List<String> ccList = ccEmailAddresses != null ?
+                    Arrays.asList(ccEmailAddresses.split(",")) :
+                    new ArrayList<>();
+            List<String> bccList = bccEmailAddresses != null ?
+                    Arrays.asList(bccEmailAddresses.split(",")):
+                    new ArrayList<>();
             request.setToEmailAddresses(emailList);
             request.setCcEmailAddresses(ccList);
             request.setBccEmailAddresses(bccList);

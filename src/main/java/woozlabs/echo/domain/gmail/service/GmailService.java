@@ -280,6 +280,7 @@ public class GmailService {
             Message message = createMessage(mimeMessage);
             gmailService.users().messages().send(USER_ID, message).execute();
         }catch (Exception e) {
+            e.printStackTrace();
             throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE,
                     ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE.getMessage()
             );
