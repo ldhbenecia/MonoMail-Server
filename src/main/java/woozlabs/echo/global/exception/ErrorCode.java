@@ -19,7 +19,7 @@ public enum ErrorCode {
     NOT_FOUND_FIREBASE_CLOUD_MESSAGING_TOKEN_ERR(404, "Not Found FCM Token"),
     FAILED_TO_CREATE_CUSTOM_TOKEN(500, "Failed to create custom token"),
     FAILED_TO_SET_CUSTOM_CLAIMS(500, "Failed to set custom claims"),
-    DUPLICATE_FCM_TOKEN_ERR(400,"Is already exist this token"),
+    DUPLICATE_FCM_TOKEN_ERR(400, "Is already exist this token"),
     EXCEED_FCM_TOKEN_SIZE_ERR(400, "Exceed maximum token size"),
     FIREBASE_ACCOUNT_DELETION_ERROR(500, "Can not firebase account deleted"),
     FIREBASE_AUTH_ERROR(500, "Failed to create Firebase custom token"),
@@ -77,7 +77,7 @@ public enum ErrorCode {
     BILLING_ERROR_MESSAGE(402, "Payment Required"),
     NOT_FOUND_GMAIL_THREAD(404, "Not found Gmail Thread"),
     THREAD_NOT_FOUND_AND_REMOVED(404, "The thread was deleted and the shared email has been removed."),
-    FAILED_TO_CONVERT_MULTI_PART_FILE_TO_TEMP_FILE(500,"Failed to convert MultipartFile to TempFile"),
+    FAILED_TO_CONVERT_MULTI_PART_FILE_TO_TEMP_FILE(500, "Failed to convert MultipartFile to TempFile"),
     EXCEED_ATTACHMENT_FILE_SIZE(400, "Exceed your attachment's file size, max: 25MB"),
 
     // calendar
@@ -113,6 +113,8 @@ public enum ErrorCode {
     // Side Bar
     NOT_FOUND_SIDE_BAR_CONFIG(404, "Not Found: SideBar Config"),
     INVALID_ACCOUNT_UID(400, "Is not linked to the primary account's super account"),
+    NOT_FOUND_BOOKMARK_ERROR_MESSAGE(404, "Not found: this bookmarks"),
+    DUPLICATE_QUERY_ERROR_MESSAGE(403, "Bookmarks with the same query cannot be modified."),
 
     // Organization
     NOT_FOUND_ORGANIZATION(404, "Not Found: Organization"),

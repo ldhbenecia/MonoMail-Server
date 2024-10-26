@@ -185,6 +185,7 @@ public class MemberService {
                                 .displayName(account.getDisplayName())
                                 .profileImageUrl(account.getProfileImageUrl())
                                 .provider(account.getProvider())
+                                .isExpired(account.getAccessToken() == null)
                                 .scopes(grantedScopes)
                                 .build();
                     })
@@ -216,6 +217,7 @@ public class MemberService {
                     .displayName(currentAccount.getDisplayName())
                     .profileImageUrl(currentAccount.getProfileImageUrl())
                     .provider(currentAccount.getProvider())
+                    .isExpired(currentAccount.getAccessToken() == null)
                     .scopes(googleOAuthUtils.getGrantedScopes(currentAccount.getAccessToken()))
                     .build();
 
