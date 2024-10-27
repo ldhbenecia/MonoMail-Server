@@ -1,9 +1,17 @@
 package woozlabs.echo.global.batch;
 
+import java.net.SocketException;
+import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
+import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
+import org.springframework.batch.core.StepExecution;
+import org.springframework.batch.core.StepExecutionListener;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.job.builder.JobBuilder;
@@ -17,13 +25,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.domain.Sort;
 import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.web.client.ResourceAccessException;
 import woozlabs.echo.domain.member.entity.Account;
 import woozlabs.echo.domain.member.repository.AccountRepository;
 import woozlabs.echo.global.utils.GoogleOAuthUtils;
-
-import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.Map;
 
 @Slf4j
 @Configuration
@@ -37,6 +42,8 @@ public class TokenRefreshBatchJob {
     private final GoogleOAuthUtils googleOAuthUtils;
 
     private static final int CHUNK_SIZE = 10;
+    private static final int MAX_RETRIES = 3;
+    private static final int SKIP_LIMIT = 10;
 
     @Bean
     public Job refreshTokenJob() {
@@ -53,10 +60,19 @@ public class TokenRefreshBatchJob {
                 .processor(tokenRefreshProcessor())
                 .writer(accountWriter())
                 .faultTolerant()
-                .retry(Exception.class)
-                .retryLimit(3)
-                .skip(Exception.class)
-                .skipLimit(3)
+                .retry(ResourceAccessException.class)
+                .retry(SocketException.class)
+                .retryLimit(MAX_RETRIES)
+                .skip(ResourceAccessException.class)
+                .skip(SocketException.class)
+                .skipLimit(SKIP_LIMIT)
+                .listener(new StepExecutionListener() {
+                    @Override
+                    public ExitStatus afterStep(@NotNull StepExecution stepExecution) {
+                        log.info("Step completed with {} skips", stepExecution.getSkipCount());
+                        return null;
+                    }
+                })
                 .build();
     }
 
