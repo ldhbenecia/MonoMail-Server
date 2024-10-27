@@ -50,6 +50,10 @@ public class UserBookmarkService {
                 .orElseThrow(() -> new CustomErrorException(ErrorCode.NOT_FOUND_ACCOUNT_ERROR_MESSAGE));
 
         List<UserBookmark> userBookmarks = userBookmarkRepository.findByAccount(account);
+        if (userBookmarks.isEmpty()) {
+            return null;
+        }
+
         return userBookmarks.stream()
                 .map(bookmark -> UserBookmarkDto.builder()
                         .query(bookmark.getQuery())
