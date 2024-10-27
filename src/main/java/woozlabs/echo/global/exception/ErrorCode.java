@@ -116,6 +116,9 @@ public enum ErrorCode {
     NOT_FOUND_BOOKMARK_ERROR_MESSAGE(404, "Not found: this bookmarks"),
     DUPLICATE_QUERY_ERROR_MESSAGE(403, "Bookmarks with the same query cannot be modified."),
 
+    // pin
+    NOT_FOUND_PIN(404, "No pins found for this account."),
+
     // Organization
     NOT_FOUND_ORGANIZATION(404, "Not Found: Organization"),
     NOT_FOUND_CONTACT_GROUP(404, "Not Found: Contact Group"),
