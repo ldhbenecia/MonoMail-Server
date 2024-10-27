@@ -45,6 +45,13 @@ public class PinService {
 
         List<Pin> pins = pinRepository.findByAccount(account);
 
+        if (pins.isEmpty()) {
+            return PinResponseDto.builder()
+                    .uid(activeAccountUid)
+                    .pinnedEmails(null)
+                    .build();
+        }
+
         List<String> pinnedEmails = pins.stream()
                 .flatMap(pin -> pin.getPinnedEmails().stream())
                 .collect(Collectors.toList());
