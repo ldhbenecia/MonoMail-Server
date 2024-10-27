@@ -1,12 +1,17 @@
 package woozlabs.echo.global.config;
 
-import org.apache.hc.client5.http.classic.HttpClient;
+import java.time.Duration;
+import java.util.Arrays;
+import org.apache.hc.client5.http.HttpRequestRetryStrategy;
 import org.apache.hc.client5.http.config.ConnectionConfig;
 import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.DefaultHttpRequestRetryStrategy;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
 import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
 import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
 import org.apache.hc.client5.http.io.HttpClientConnectionManager;
 import org.apache.hc.core5.http.io.SocketConfig;
+import org.apache.hc.core5.util.TimeValue;
 import org.apache.hc.core5.util.Timeout;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -23,19 +28,22 @@ import org.springframework.web.service.invoker.HttpServiceProxyFactory;
 import woozlabs.echo.domain.chatGPT.ChatGPTInterface;
 import woozlabs.echo.domain.gemini.GeminiInterface;
 
-import java.util.Arrays;
-import java.util.List;
-
 @Configuration
 public class RestTemplateConfig {
 
     @Bean
     public RestTemplate restTemplate(RestTemplateBuilder restTemplateBuilder) {
-        RestTemplate restTemplate = restTemplateBuilder.build();
+        // RestTemplateBuilder로 RestTemplate 생성
+        RestTemplate restTemplate = restTemplateBuilder
+                .setConnectTimeout(Duration.ofSeconds(10)) // 연결 타임아웃
+                .setReadTimeout(Duration.ofSeconds(10))    // 읽기 타임아웃
+                .build();
 
-        // HTTP Components Client를 사용하여 Request Factory 설정
-        restTemplate.setRequestFactory(new HttpComponentsClientHttpRequestFactory(createHttpClient()));
+        // HttpComponentsClientHttpRequestFactory 설정
+        HttpComponentsClientHttpRequestFactory factory = new HttpComponentsClientHttpRequestFactory(createHttpClient());
+        restTemplate.setRequestFactory(factory);
 
+        // 메시지 변환기 설정
         restTemplate.setMessageConverters(Arrays.asList(
                 new MappingJackson2HttpMessageConverter(),
                 new FormHttpMessageConverter()
@@ -44,33 +52,44 @@ public class RestTemplateConfig {
         return restTemplate;
     }
 
-
-    private HttpClient createHttpClient() {
-        // Connection request timeout
+    private CloseableHttpClient createHttpClient() {
+        // 요청 설정
         RequestConfig requestConfig = RequestConfig.custom()
-                .setConnectionRequestTimeout(Timeout.ofMilliseconds(10000))
+                .setConnectionRequestTimeout(Timeout.ofSeconds(10))
+                .setResponseTimeout(Timeout.ofSeconds(10))
                 .build();
+
+        // 연결 풀링 및 소켓 설정
+        ConnectionConfig connectionConfig = ConnectionConfig.custom()
+                .setConnectTimeout(Timeout.ofSeconds(10))
+                .setSocketTimeout(Timeout.ofSeconds(10))
+                .setValidateAfterInactivity(Timeout.ofSeconds(10))
+                .build();
+
+        SocketConfig socketConfig = SocketConfig.custom()
+                .setSoTimeout(Timeout.ofSeconds(10))
+                .setSoKeepAlive(true) // Keep-alive 활성화
+                .setTcpNoDelay(true)  // Nagle's algorithm 비활성화
+                .build();
+
+        // HttpRequestRetryStrategy를 사용하여 재시도 전략 설정
+        HttpRequestRetryStrategy retryStrategy = new DefaultHttpRequestRetryStrategy(3,
+                TimeValue.ofSeconds(1)); // 최대 3회 재시도, 1초 대기
+
         return HttpClientBuilder.create()
-                .setConnectionManager(createHttpClientConnectionManager())
+                .setConnectionManager(createConnectionManager(connectionConfig, socketConfig))
                 .setDefaultRequestConfig(requestConfig)
+                .setRetryStrategy(retryStrategy) // HttpRequestRetryStrategy 설정
                 .build();
     }
 
-    private HttpClientConnectionManager createHttpClientConnectionManager() {
-        // Connect timeout
-        ConnectionConfig connectionConfig = ConnectionConfig.custom()
-                .setConnectTimeout(Timeout.ofMilliseconds(10000))
-                .build();
-
-        // Socket timeout
-        SocketConfig socketConfig = SocketConfig.custom()
-                .setSoTimeout(Timeout.ofMilliseconds(10000))
-                .build();
+    private HttpClientConnectionManager createConnectionManager(ConnectionConfig connectionConfig,
+                                                                SocketConfig socketConfig) {
         return PoolingHttpClientConnectionManagerBuilder.create()
-                .setMaxConnTotal(200)
-                .setMaxConnPerRoute(50)
-                .setDefaultSocketConfig(socketConfig)
-                .setDefaultConnectionConfig(connectionConfig)
+                .setMaxConnTotal(200) // 전체 최대 연결 수
+                .setMaxConnPerRoute(50) // 각 라우트당 최대 연결 수
+                .setDefaultConnectionConfig(connectionConfig) // 기본 연결 설정
+                .setDefaultSocketConfig(socketConfig) // 기본 소켓 설정
                 .build();
     }
 
