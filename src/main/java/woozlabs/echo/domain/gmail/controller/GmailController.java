@@ -200,50 +200,6 @@ public class GmailController {
         }
     }
 
-    @PostMapping("/api/v1/gmail/messages/send/reply")
-    public ResponseEntity<?> sendReply(HttpServletRequest httpServletRequest,
-                                       @RequestParam("mailto") String toEmailAddresses,
-                                       @RequestParam(value = "cc", required = false) String ccEmailAddresses,
-                                       @RequestParam(value = "bcc", required = false) String bccEmailAddresses,
-                                       @RequestParam("subject") String subject,
-                                       @RequestParam("body") String bodyText,
-                                       @RequestParam("messageId") String messageId,
-                                       @RequestParam(value = "files", required = false) List<MultipartFile> files,
-                                       @RequestParam("aAUid") String aAUid){
-        log.info("Request to send reply");
-        try {
-            List<File> attachments = new ArrayList<>();
-            String accessToken = gmailUtility.getActiveAccountAccessToken(httpServletRequest, aAUid);
-            GmailMessageSendRequest request = new GmailMessageSendRequest();
-            List<String> emailList = Arrays.asList(toEmailAddresses.split(","));
-            List<String> ccList = ccEmailAddresses != null ?
-                    Arrays.asList(ccEmailAddresses.split(",")) :
-                    new ArrayList<>();
-            List<String> bccList = bccEmailAddresses != null ?
-                    Arrays.asList(bccEmailAddresses.split(",")):
-                    new ArrayList<>();
-            request.setToEmailAddresses(emailList);
-            request.setCcEmailAddresses(ccList);
-            request.setBccEmailAddresses(bccList);
-            request.setSubject(subject);
-            request.setBodyText(bodyText);
-            if (files == null) files = new ArrayList<>();
-            for (MultipartFile multipartFile : files) {
-                // check exceed maximum
-                if (multipartFile.getSize() > 25 * 1000 * 1000)
-                    throw new CustomErrorException(ErrorCode.EXCEED_ATTACHMENT_FILE_SIZE);
-                File tmpFile = gmailUtility.convertMultipartFileToTempFile(multipartFile);
-                attachments.add(tmpFile);
-            }
-            request.setFiles(attachments);
-            gmailService.sendEmailReply(request, messageId, accessToken);
-            return new ResponseEntity<>(HttpStatus.CREATED);
-        }catch (Exception e){
-            throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_REPLY_API_ERROR_MESSAGE, e.getMessage());
-        }
-    }
-
-
     @PostMapping("/api/v1/gmail/drafts/create")
     public ResponseEntity<?> createDraft(HttpServletRequest httpServletRequest,
                                                    @RequestParam("mailto") String toEmailAddresses,
