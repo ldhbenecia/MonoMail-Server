@@ -3,6 +3,7 @@ package woozlabs.echo.domain.gmail.controller;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -170,24 +171,14 @@ public class GmailController {
                                                    @RequestParam("subject") String subject,
                                                    @RequestParam("body") String bodyText,
                                                    @RequestParam(value = "files", required = false) List<MultipartFile> files,
-                                                   @RequestParam("aAUid") String aAUid){
+                                                   @RequestParam("aAUid") String aAUid,
+                                                   @RequestParam(value = "type", required = false) String type,
+                                                   @RequestParam(value = "messageId", required = false) String messageId){
         log.info("Request to send message");
         try{
             List<File> attachments = new ArrayList<>();
             String accessToken = gmailUtility.getActiveAccountAccessToken(httpServletRequest, aAUid);
-            GmailMessageSendRequest request = new GmailMessageSendRequest();
-            List<String> emailList = Arrays.asList(toEmailAddresses.split(","));
-            List<String> ccList = ccEmailAddresses != null ?
-                    Arrays.asList(ccEmailAddresses.split(",")) :
-                    new ArrayList<>();
-            List<String> bccList = bccEmailAddresses != null ?
-                    Arrays.asList(bccEmailAddresses.split(",")):
-                    new ArrayList<>();
-            request.setToEmailAddresses(emailList);
-            request.setCcEmailAddresses(ccList);
-            request.setBccEmailAddresses(bccList);
-            request.setSubject(subject);
-            request.setBodyText(bodyText);
+            GmailMessageSendRequest request = gmailUtility.createMessageSendRequest(toEmailAddresses, ccEmailAddresses, bccEmailAddresses, subject, bodyText, type);
             if(files == null) files = new ArrayList<>();
             for(MultipartFile multipartFile : files){
                 // check exceed maximum
@@ -196,10 +187,15 @@ public class GmailController {
                 attachments.add(tmpFile);
             }
             request.setFiles(attachments);
-            gmailService.sendUserEmailMessage(accessToken, request);
+            if(request.getSendType().equals(SendType.NORMAL.getValue())){ // message type == normal
+                gmailService.sendUserEmailMessage(accessToken, request);
+            }else if(request.getSendType().equals(SendType.REPLY.getValue())){ // message type == reply
+                gmailService.sendEmailReply(request, messageId, accessToken);
+            }else if(request.getSendType().equals(SendType.FORWARD.getValue())){ // message type == forward
+                gmailService.sendEmailForwarding(request, messageId, accessToken);
+            }
             return new ResponseEntity<>(HttpStatus.CREATED);
         }catch (Exception e){
-            e.printStackTrace();
             throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE, ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE.getMessage());
         }
     }
@@ -331,6 +327,16 @@ public class GmailController {
         }
     }
 
+    @GetMapping("/api/v1/gmail/drafts")
+    public ResponseEntity<?> getDrafts(HttpServletRequest httpServletRequest,
+                                                    @RequestParam(value = "pageToken", required = false) String pageToken,
+                                                    @RequestParam(value = "maxResults", required = false, defaultValue = "50") Long maxResults,
+                                                    @RequestParam("aAUid") String aAUid){
+        log.info("Request to get drafts");
+        String accessToken = gmailUtility.getActiveAccountAccessToken(httpServletRequest, aAUid);
+        gmailService.getUserEmailDrafts(accessToken, pageToken, "");
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
     @PostMapping(value = "/api/v1/gmail/drafts/send", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> sendDraft(HttpServletRequest httpServletRequest,
                                                    @RequestParam("mailto") String toEmailAddresses,

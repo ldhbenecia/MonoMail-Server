@@ -24,6 +24,8 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 import woozlabs.echo.domain.chatGPT.service.ChatGptService;
+import woozlabs.echo.domain.gmail.dto.message.GmailMessageSendRequest;
+import woozlabs.echo.domain.gmail.dto.message.SendType;
 import woozlabs.echo.domain.gmail.dto.template.ExtractScheduleInfo;
 import woozlabs.echo.domain.gmail.dto.template.ExtractVerificationInfo;
 import woozlabs.echo.domain.member.entity.Account;
@@ -145,6 +147,24 @@ public class GmailUtility {
         }
         tempFile.deleteOnExit();
         return tempFile;
+    }
+
+    public GmailMessageSendRequest createMessageSendRequest(String toEmailAddresses, String ccEmailAddresses, String bccEmailAddresses, String subject, String bodyText, String type) {
+        GmailMessageSendRequest request = new GmailMessageSendRequest();
+        List<String> emailList = Arrays.asList(toEmailAddresses.split(","));
+        List<String> ccList = ccEmailAddresses != null ?
+                Arrays.asList(ccEmailAddresses.split(",")) :
+                new ArrayList<>();
+        List<String> bccList = bccEmailAddresses != null ?
+                Arrays.asList(bccEmailAddresses.split(",")):
+                new ArrayList<>();
+        request.setToEmailAddresses(emailList);
+        request.setCcEmailAddresses(ccList);
+        request.setBccEmailAddresses(bccList);
+        request.setSubject(subject);
+        request.setBodyText(bodyText);
+        request.setSendType(type == null ? SendType.NORMAL.getValue() : type);
+        return request;
     }
 
     private HttpRequestInitializer createCredentialWithAccessToken(String accessToken) {
