@@ -28,6 +28,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.web.client.ResourceAccessException;
 import woozlabs.echo.domain.member.entity.Account;
 import woozlabs.echo.domain.member.repository.AccountRepository;
+import woozlabs.echo.global.exception.CustomErrorException;
 import woozlabs.echo.global.utils.GoogleOAuthUtils;
 
 @Slf4j
@@ -62,9 +63,11 @@ public class TokenRefreshBatchJob {
                 .faultTolerant()
                 .retry(ResourceAccessException.class)
                 .retry(SocketException.class)
+                .retry(CustomErrorException.class)
                 .retryLimit(MAX_RETRIES)
                 .skip(ResourceAccessException.class)
                 .skip(SocketException.class)
+                .skip(CustomErrorException.class)
                 .skipLimit(SKIP_LIMIT)
                 .listener(new StepExecutionListener() {
                     @Override
