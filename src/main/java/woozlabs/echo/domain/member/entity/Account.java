@@ -43,6 +43,7 @@ public class Account extends BaseEntity {
     private String refreshToken;
     private LocalDateTime accessTokenFetchedAt;
     private LocalDateTime lastLoginAt;
+    private Boolean hasBookmark = false;
 
     @Builder.Default
     @OneToMany(mappedBy = "account", cascade = CascadeType.ALL, orphanRemoval = true)

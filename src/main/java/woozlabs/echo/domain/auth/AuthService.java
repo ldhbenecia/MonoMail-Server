@@ -74,6 +74,7 @@ public class AuthService {
                 .refreshToken(refreshToken)
                 .accessTokenFetchedAt(LocalDateTime.now())
                 .provider(provider)
+                .hasBookmark(false)
                 .build();
     }
 
