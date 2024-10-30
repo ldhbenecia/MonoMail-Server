@@ -43,17 +43,20 @@ public class UserBookmarkService {
         userBookmark.setIcon(userBookmarkConfigDto.getIcon());
 
         userBookmarkRepository.save(userBookmark);
+
+        account.setHasBookmark(true);
+        accountRepository.save(account);
     }
 
     public List<UserBookmarkDto> getBookmarkByaAUid(String activeAccountUid) {
         Account account = accountRepository.findByUid(activeAccountUid)
                 .orElseThrow(() -> new CustomErrorException(ErrorCode.NOT_FOUND_ACCOUNT_ERROR_MESSAGE));
 
-        List<UserBookmark> userBookmarks = userBookmarkRepository.findByAccount(account);
-        if (userBookmarks.isEmpty()) {
+        if (!account.getHasBookmark()) {
             return null;
         }
 
+        List<UserBookmark> userBookmarks = userBookmarkRepository.findByAccount(account);
         return userBookmarks.stream()
                 .map(bookmark -> UserBookmarkDto.builder()
                         .query(bookmark.getQuery())
