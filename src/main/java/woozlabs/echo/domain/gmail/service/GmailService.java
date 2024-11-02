@@ -675,7 +675,7 @@ public class GmailService {
                     .map(MessagePartHeader::getValue)
                     .orElse("");
             if(!validateChangedSubject(request.getSubject(), threadSubject)){ // send reply
-                request.setSubject("Re: " + request.getSubject());
+                request.setSubject(request.getSubject());
                 MimeMessage mimeMessage = createEmail(request);
                 // 답장 관련 헤더 설정
                 if (!originalMessageId.isEmpty()) {
@@ -724,7 +724,7 @@ public class GmailService {
                     .map(MessagePartHeader::getValue)
                     .orElse("");
             if(!validateChangedSubject(request.getSubject(), threadSubject)){ // send reply
-                request.setSubject("Fwd: " + request.getSubject());
+                request.setSubject(request.getSubject());
                 MimeMessage mimeMessage = createEmail(request);
                 // 답장 관련 헤더 설정
                 if (!originalMessageId.isEmpty()) {
