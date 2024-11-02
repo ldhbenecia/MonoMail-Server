@@ -75,8 +75,6 @@ import static woozlabs.echo.global.constant.GlobalConstant.*;
 @RequiredArgsConstructor
 @EnableAsync
 public class GmailService {
-    // constants
-    private final String TEMP_FILE_PREFIX = "echo";
     // injection & init
     private final MultiThreadGmailService multiThreadGmailService;
     private final AccountRepository accountRepository;
@@ -101,30 +99,12 @@ public class GmailService {
         threads = isEmptyResult(threads);
         List<GmailThreadListThreads> detailedThreads = getDetailedThreads(threads, gmailService); // get detailed threads
         if(pageToken != null){
-            validatePayment(detailedThreads, currentDate);
+            validatePaymentThread(detailedThreads, currentDate);
         }
         return GmailThreadListResponse.builder()
                 .threads(detailedThreads)
                 .nextPageToken(response.getNextPageToken())
                 .build();
-    }
-
-    private void validatePayment(List<GmailThreadListThreads> detailedThreads, LocalDate currentDate) {
-        if(!detailedThreads.isEmpty()){
-            // get first thread date
-            GmailThreadListThreads firstThread = detailedThreads.get(0);
-            GmailThreadGetMessagesResponse lastMessageInFirstThread = firstThread.getMessages().get(0);
-            Long timeStamp = lastMessageInFirstThread.getTimestamp();
-            String timeZone = lastMessageInFirstThread.getTimezone();
-            Instant instant = Instant.ofEpochMilli(timeStamp);
-            ZonedDateTime zonedDateTime = instant.atZone(ZoneId.of(timeZone));
-            LocalDate firstThreadDate = zonedDateTime.toLocalDate();
-            // check validation
-            LocalDate beforeSixtyDays = currentDate.minusDays(60);
-            if(firstThreadDate.isBefore(beforeSixtyDays)){
-                throw new CustomErrorException(ErrorCode.BILLING_ERROR_MESSAGE, ErrorCode.BILLING_ERROR_MESSAGE.getMessage());
-            }
-        }
     }
 
     public GmailThreadGetResponse getUserEmailThread(String accessToken, String id){
@@ -335,12 +315,24 @@ public class GmailService {
         }
     }
 
-    public void getUserEmailDrafts(String accessToken, String pageToken, String q){
+    public GmailDraftListResponse getUserEmailDrafts(String accessToken, String pageToken, Long maxResult, String q){
         try{
             Gmail gmailService = gmailUtility.createGmailService(accessToken);
-            ListDraftsResponse draftsResponse = getListDraftsResponse(gmailService, pageToken, q);
+            ListDraftsResponse draftsResponse = getListDraftsResponse(gmailService, pageToken, maxResult, q);
+            // ---- temp data ----
+            LocalDate currentDate = LocalDate.now();
+            Boolean isBilling = Boolean.FALSE;
+            // -------------------
             List<Draft> drafts = draftsResponse.getDrafts();
-            System.out.println(drafts);
+            drafts = isEmptyResult(drafts);
+            List<GmailDraftListDrafts> detailedDrafts = getDetailedDrafts(drafts, gmailService); // get detailed threads
+            if(pageToken != null){
+                validatePaymentDraft(detailedDrafts, currentDate);
+            }
+            return GmailDraftListResponse.builder()
+                    .drafts(detailedDrafts)
+                    .nextPageToken(draftsResponse.getNextPageToken())
+                    .build();
         }catch (IOException e) {
             throw new IllegalArgumentException("Error occurred while getting drafts");
         }
@@ -372,9 +364,7 @@ public class GmailService {
             Message message = createMessage(mimeMessage);
             // create new draft
             Draft draft = new Draft().setMessage(message);
-            System.out.println(id);
             draft = gmailService.users().drafts().update(USER_ID, id, draft).execute();
-            System.out.println(draft);
             GmailDraftGetMessage changedMessage = GmailDraftGetMessage.toGmailDraftGetMessages(draft.getMessage());
             return GmailDraftUpdateResponse.builder()
                     .id(draft.getId())
@@ -814,6 +804,71 @@ public class GmailService {
         }).collect(Collectors.toList());
     }
 
+    private List<GmailDraftListDrafts> getDetailedDrafts(List<Draft> drafts, Gmail gmailService) {
+        //int nThreads = Runtime.getRuntime().availableProcessors();
+        int nThreads = 25;
+        ExecutorService executor = Executors.newFixedThreadPool(nThreads);
+        List<CompletableFuture<GmailDraftListDrafts>> futures = drafts.stream()
+                .map((draft) -> {
+                    CompletableFuture<GmailDraftListDrafts> future = new CompletableFuture<>();
+                    executor.execute(() -> {
+                        try{
+                            GmailDraftListDrafts result = multiThreadGmailService
+                                    .multiThreadRequestGmailDraftGetForList(draft, gmailService);
+                            future.complete(result);
+                        }catch (Exception e){
+                            log.error(REQUEST_GMAIL_USER_MESSAGES_GET_API_ERR_MSG);
+                            future.completeExceptionally(new GmailException(REQUEST_GMAIL_USER_MESSAGES_GET_API_ERR_MSG));
+                        }
+                    });
+                    return future;
+                }).toList();
+        return futures.stream().map((future) -> {
+            try{
+                return future.get();
+            }catch (Exception e){
+                log.error(e.getMessage());
+                throw new GmailException(REQUEST_GMAIL_USER_MESSAGES_GET_API_ERR_MSG);
+            }
+        }).collect(Collectors.toList());
+    }
+
+    private void validatePaymentThread(List<GmailThreadListThreads> detailedThreads, LocalDate currentDate) {
+        if(!detailedThreads.isEmpty()){
+            // get first thread date
+            GmailThreadListThreads firstThread = detailedThreads.get(0);
+            GmailThreadGetMessagesResponse lastMessageInFirstThread = firstThread.getMessages().get(0);
+            Long timeStamp = lastMessageInFirstThread.getTimestamp();
+            String timeZone = lastMessageInFirstThread.getTimezone();
+            Instant instant = Instant.ofEpochMilli(timeStamp);
+            ZonedDateTime zonedDateTime = instant.atZone(ZoneId.of(timeZone));
+            LocalDate firstThreadDate = zonedDateTime.toLocalDate();
+            // check validation
+            LocalDate beforeSixtyDays = currentDate.minusDays(60);
+            if(firstThreadDate.isBefore(beforeSixtyDays)){
+                throw new CustomErrorException(ErrorCode.BILLING_ERROR_MESSAGE, ErrorCode.BILLING_ERROR_MESSAGE.getMessage());
+            }
+        }
+    }
+
+    private void validatePaymentDraft(List<GmailDraftListDrafts> detailedDrafts, LocalDate currentDate) {
+        if(!detailedDrafts.isEmpty()){
+            // get first thread date
+            GmailDraftListDrafts firstDraft = detailedDrafts.get(0);
+            GmailThreadGetMessagesResponse draftMessage = firstDraft.getMessage(); // 분리 필요
+            Long timeStamp = draftMessage.getTimestamp();
+            String timeZone = draftMessage.getTimezone();
+            Instant instant = Instant.ofEpochMilli(timeStamp);
+            ZonedDateTime zonedDateTime = instant.atZone(ZoneId.of(timeZone));
+            LocalDate firstThreadDate = zonedDateTime.toLocalDate();
+            // check validation
+            LocalDate beforeSixtyDays = currentDate.minusDays(60);
+            if(firstThreadDate.isBefore(beforeSixtyDays)){
+                throw new CustomErrorException(ErrorCode.BILLING_ERROR_MESSAGE, ErrorCode.BILLING_ERROR_MESSAGE.getMessage());
+            }
+        }
+    }
+
     private List<GmailThreadSearchListThreads> getSimpleThreads(List<Thread> threads){
         List<GmailThreadSearchListThreads> gmailThreadSearchListThreads = new ArrayList<>();
         threads.forEach((thread) ->{
@@ -834,7 +889,6 @@ public class GmailService {
                     .setQ(q)
                     .execute();
         }catch (GoogleJsonResponseException e){
-            e.printStackTrace();
             switch (e.getStatusCode()) {
                 case 401 ->
                         throw new CustomErrorException(ErrorCode.INVALID_ACCESS_TOKEN, ErrorCode.INVALID_ACCESS_TOKEN.getMessage());
@@ -885,10 +939,10 @@ public class GmailService {
         }
     }
 
-    private ListDraftsResponse getListDraftsResponse(Gmail gmailService, String pageToken, String q) throws IOException{
+    private ListDraftsResponse getListDraftsResponse(Gmail gmailService, String pageToken, Long maxResults, String q) throws IOException{
         return gmailService.users().drafts()
                 .list(USER_ID)
-                .setMaxResults(THREADS_LIST_MAX_LENGTH)
+                .setMaxResults(maxResults)
                 .setPrettyPrint(Boolean.TRUE)
                 .setPageToken(pageToken)
                 .setQ(q)

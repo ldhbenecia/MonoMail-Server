@@ -9,6 +9,5 @@ public class GmailDraftListAttachments {
     private String mimeType;
     private String fileName;
     private String attachmentId;
-    private String contentId;
     private int size;
 }

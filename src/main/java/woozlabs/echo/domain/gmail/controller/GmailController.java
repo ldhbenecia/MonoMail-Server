@@ -3,7 +3,6 @@ package woozlabs.echo.domain.gmail.controller;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.jetbrains.annotations.NotNull;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -200,6 +199,18 @@ public class GmailController {
         }
     }
 
+    @GetMapping("/api/v1/gmail/drafts")
+    public ResponseEntity<?> getDrafts(HttpServletRequest httpServletRequest,
+                                                    @RequestParam(value = "pageToken", required = false) String pageToken,
+                                                    @RequestParam(value = "maxResults", required = false, defaultValue = "50") Long maxResults,
+                                                    @RequestParam(value = "q", required = false) String q,
+                                                    @RequestParam("aAUid") String aAUid){
+        log.info("Request to get drafts");
+        String accessToken = gmailUtility.getActiveAccountAccessToken(httpServletRequest, aAUid);
+        GmailDraftListResponse response = gmailService.getUserEmailDrafts(accessToken, pageToken, maxResults, q);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
     @PostMapping("/api/v1/gmail/drafts/create")
     public ResponseEntity<?> createDraft(HttpServletRequest httpServletRequest,
                                                    @RequestParam("mailto") String toEmailAddresses,
@@ -283,16 +294,6 @@ public class GmailController {
         }
     }
 
-    @GetMapping("/api/v1/gmail/drafts")
-    public ResponseEntity<?> getDrafts(HttpServletRequest httpServletRequest,
-                                                    @RequestParam(value = "pageToken", required = false) String pageToken,
-                                                    @RequestParam(value = "maxResults", required = false, defaultValue = "50") Long maxResults,
-                                                    @RequestParam("aAUid") String aAUid){
-        log.info("Request to get drafts");
-        String accessToken = gmailUtility.getActiveAccountAccessToken(httpServletRequest, aAUid);
-        gmailService.getUserEmailDrafts(accessToken, pageToken, "");
-        return new ResponseEntity<>(HttpStatus.OK);
-    }
     @PostMapping(value = "/api/v1/gmail/drafts/send", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> sendDraft(HttpServletRequest httpServletRequest,
                                                    @RequestParam("mailto") String toEmailAddresses,
