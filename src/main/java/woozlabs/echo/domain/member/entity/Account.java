@@ -15,7 +15,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import woozlabs.echo.domain.contactGroup.entity.AccountContactGroup;
 import woozlabs.echo.domain.echo.entity.EmailTemplate;
 import woozlabs.echo.domain.echo.entity.UserBookmark;
 import woozlabs.echo.domain.signature.Signature;
@@ -55,8 +54,9 @@ public class Account extends BaseEntity {
     @OneToMany(mappedBy = "account", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserBookmark> bookmarks = new ArrayList<>();
 
-    @OneToMany(mappedBy = "account", cascade = CascadeType.ALL)
-    private List<AccountContactGroup> accountContactGroups = new ArrayList<>();
+    // alpha not used
+    // @OneToMany(mappedBy = "account", cascade = CascadeType.ALL)
+    // private List<AccountContactGroup> accountContactGroups = new ArrayList<>();
 
     @OneToMany(mappedBy = "ownerId", cascade = CascadeType.ALL)
     private List<Signature> allSignatures = new ArrayList<>();
