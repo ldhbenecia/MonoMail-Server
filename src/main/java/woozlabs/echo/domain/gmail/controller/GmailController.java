@@ -245,8 +245,8 @@ public class GmailController {
                 attachments.add(tmpFile);
             }
             request.setFiles(attachments);
-            gmailService.createUserEmailDraft(accessToken, request);
-            return new ResponseEntity<>(HttpStatus.CREATED);
+            GmailDraftCreateResponse response = gmailService.createUserEmailDraft(accessToken, request);
+            return new ResponseEntity<>(response, HttpStatus.CREATED);
         }catch (Exception e){
             throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_DRAFTS_SEND_API_ERROR_MESSAGE, e.getMessage());
         }

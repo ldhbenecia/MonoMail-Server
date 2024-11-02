@@ -374,8 +374,8 @@ public class GmailService {
         }
     }
 
-    @Async
-    public void createUserEmailDraft(String accessToken, GmailDraftCommonRequest request){
+    //@Async
+    public GmailDraftCreateResponse createUserEmailDraft(String accessToken, GmailDraftCommonRequest request){
         try{
             Gmail gmailService = gmailUtility.createGmailService(accessToken);
             Profile profile = gmailService.users().getProfile(USER_ID).execute();
@@ -385,7 +385,11 @@ public class GmailService {
             Message message = createMessage(mimeMessage);
             // create new draft
             Draft draft = new Draft().setMessage(message);
-            gmailService.users().drafts().create(USER_ID, draft).execute();
+            Draft newDraft = gmailService.users().drafts().create(USER_ID, draft).execute();
+            return GmailDraftCreateResponse.builder()
+                    .messageId(newDraft.getMessage().getId())
+                    .draftId(newDraft.getId())
+                    .build();
         }catch (Exception e) {
             throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE,
                     ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE.getMessage()

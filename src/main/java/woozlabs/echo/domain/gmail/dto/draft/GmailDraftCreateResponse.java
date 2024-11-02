@@ -7,6 +7,6 @@ import woozlabs.echo.global.dto.ResponseDto;
 @Data
 @Builder
 public class GmailDraftCreateResponse implements ResponseDto {
-    private String id;
-    private GmailDraftGetMessage message;
+    private String messageId;
+    private String draftId;
 }
