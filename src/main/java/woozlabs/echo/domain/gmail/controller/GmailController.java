@@ -287,8 +287,8 @@ public class GmailController {
                 attachments.add(tmpFile);
             }
             request.setFiles(attachments);
-            GmailDraftUpdateResponse response = gmailService.updateUserEmailDraft(accessToken, id, request);
-            return new ResponseEntity<>(response, HttpStatus.OK);
+            gmailService.updateUserEmailDraft(accessToken, id, request);
+            return new ResponseEntity<>(HttpStatus.OK);
         }catch (Exception e){
             throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_DRAFTS_MODIFY_API_ERROR_MESSAGE, e.getMessage());
         }
