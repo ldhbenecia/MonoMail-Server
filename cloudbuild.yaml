@@ -1,37 +1,41 @@
 steps:
-  # Retrieve the latest version of the 'serviceAccountKey' secret from Secrets Manager
+  # Retrieve secrets based on branch name
   - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
         gcloud secrets versions access latest --secret="serviceAccountKey" > serviceAccountKey.json
+        if [[ "$BRANCH_NAME" == "develop" ]]; then
+          gcloud secrets versions access latest --secret="application-dev" > application-dev.yml
+        elif [[ "$BRANCH_NAME" == "main" ]]; then
+          gcloud secrets versions access latest --secret="application-prod" > application-prod.yml
+        else
+          echo "Invalid branch for deployment" && exit 1
+        fi
 
-  # Retrieve the latest version of the 'application-dev.yml' secret from Secrets Manager
+  # Determine Dockerfile to use based on branch name
   - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: 'bash'
     args:
       - '-c'
       - |
-        gcloud secrets versions access latest --secret="application-dev" > application-dev.yml
+        if [[ "$BRANCH_NAME" == "main" ]]; then 
+          cp Dockerfile.prod Dockerfile; 
+        elif [[ "$BRANCH_NAME" == "develop" ]]; then 
+          cp Dockerfile.dev Dockerfile; 
+        else 
+          echo "Invalid branch for deployment" && exit 1; 
+        fi
 
-  # Retrieve the latest version of the 'application-prod.yml' secret from Secrets Manager
-  - name: 'gcr.io/cloud-builders/gcloud'
-    entrypoint: 'bash'
-    args:
-      - '-c'
-      - |
-        gcloud secrets versions access latest --secret="application-prod" > application-prod.yml
-
-  # Build the container image based on the branch
+  # Build the container image
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
       - '-t'
       - 'us-central1-docker.pkg.dev/echo-dev-435808/cloud-run-source-deploy/echo-dev/echo-dev:$COMMIT_SHA'
-      - '--file'
-      - |
-        $(if [[ "$BRANCH_NAME" == "main" ]]; then echo "Dockerfile.prod"; elif [[ "$BRANCH_NAME" == "develop" ]]; then echo "Dockerfile.dev"; fi)
+      - '-f'
+      - 'Dockerfile'
       - '.'
 
   # Push the container image to Container Registry
