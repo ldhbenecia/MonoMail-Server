@@ -1,92 +1,34 @@
--- Contact Group
-CREATE TABLE IF NOT EXISTS `contact_group` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT,
-    `created_at` DATETIME(6),
-    `updated_at` DATETIME(6),
-    `owner_id` BIGINT,
-    `name` VARCHAR(255),
-    PRIMARY KEY (`id`),
-    FOREIGN KEY (`owner_id`) REFERENCES `account` (`id`)
-    ) ENGINE=InnoDB;
-
--- Contact Group Emails
-CREATE TABLE IF NOT EXISTS `contact_group_emails` (
-    `contact_group_id` BIGINT NOT NULL,
-    `email` VARCHAR(255),
-    PRIMARY KEY (`contact_group_id`, `email`),
-    FOREIGN KEY (`contact_group_id`) REFERENCES `contact_group` (`id`)
-    ) ENGINE=InnoDB;
-
--- Email Recipient
-CREATE TABLE IF NOT EXISTS `email_recipient` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT,
-    `email_template_id` BIGINT,
-    `email` VARCHAR(255),
-    `type` ENUM('BCC','CC','TO'),
-    PRIMARY KEY (`id`),
-    FOREIGN KEY (`email_template_id`) REFERENCES `email_template` (`id`)
-    ) ENGINE=InnoDB;
-
--- Email Template
-CREATE TABLE IF NOT EXISTS `email_template` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT,
-    `member_id` BIGINT,
-    `body` TEXT,
-    `subject` VARCHAR(255),
-    `template_name` VARCHAR(255),
-    PRIMARY KEY (`id`),
-    FOREIGN KEY (`member_id`) REFERENCES `account` (`id`)
-    ) ENGINE=InnoDB;
-
--- FCM Token
-CREATE TABLE IF NOT EXISTS `fcm_token` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT,
-    `member_id` BIGINT,
-    `fcm_token` VARCHAR(255),
-    `machine_uuid` VARCHAR(255),
-    PRIMARY KEY (`id`),
-    FOREIGN KEY (`member_id`) REFERENCES `account` (`id`)
-    ) ENGINE=InnoDB;
+-- V1__init.sql
 
 -- Account
 CREATE TABLE IF NOT EXISTS `account` (
     `id` BIGINT NOT NULL AUTO_INCREMENT,
-    `is_primary` BIT NOT NULL,
-    `access_token_fetched_at` DATETIME(6),
-    `created_at` DATETIME(6),
-    `updated_at` DATETIME(6),
-    `super_account_id` BIGINT,
-    `access_token` VARCHAR(255),
+    `uid` VARCHAR(255),
+    `provider` VARCHAR(255),
+    `provider_id` VARCHAR(255),
     `display_name` VARCHAR(255),
     `email` VARCHAR(255),
-    `google_provider_id` VARCHAR(255),
     `profile_image_url` VARCHAR(255),
+    `access_token` VARCHAR(255),
     `refresh_token` VARCHAR(255),
-    `uid` VARCHAR(255),
-    `role` ENUM('ROLE_ADMIN','ROLE_USER'),
-    PRIMARY KEY (`id`),
-    FOREIGN KEY (`super_account_id`) REFERENCES `super_account` (`id`)
-    ) ENGINE=InnoDB;
+    `access_token_fetched_at` DATETIME(6),
+    `last_login_at` DATETIME(6),
+    `has_bookmark` BOOLEAN DEFAULT FALSE,
+    `created_at` DATETIME(6),
+    `updated_at` DATETIME(6),
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB;
 
--- Account Contact Group
-CREATE TABLE IF NOT EXISTS `member_contact_group` (
+-- bookmark
+CREATE TABLE IF NOT EXISTS `user_bookmark` (
     `id` BIGINT NOT NULL AUTO_INCREMENT,
-    `contact_group_id` BIGINT,
-    `member_id` BIGINT,
+    `account_id` BIGINT,
+    `query` VARCHAR(255),
+    `title` VARCHAR(255),
+    `icon` VARCHAR(255),
     PRIMARY KEY (`id`),
-    FOREIGN KEY (`contact_group_id`) REFERENCES `contact_group` (`id`),
-    FOREIGN KEY (`member_id`) REFERENCES `account` (`id`)
-    ) ENGINE=InnoDB;
-
--- Pub Sub History
-CREATE TABLE IF NOT EXISTS `pub_sub_history` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT,
-    `history_id` DECIMAL(38,0),
-    `member_id` BIGINT,
-    PRIMARY KEY (`id`),
-    UNIQUE (`member_id`),
-    FOREIGN KEY (`member_id`) REFERENCES `account` (`id`) ON DELETE CASCADE
-    ) ENGINE=InnoDB;
+    FOREIGN KEY (`account_id`) REFERENCES `account` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB;
 
 -- Signature
 CREATE TABLE IF NOT EXISTS `signature` (
@@ -98,70 +40,153 @@ CREATE TABLE IF NOT EXISTS `signature` (
     `content` TINYTEXT,
     `type` ENUM('MEMBER','TEAM'),
     PRIMARY KEY (`id`),
-    FOREIGN KEY (`owner_id`) REFERENCES `account` (`id`)
-    ) ENGINE=InnoDB;
+    FOREIGN KEY (`owner_id`) REFERENCES `account` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB;
 
--- Super Account
-CREATE TABLE IF NOT EXISTS `super_account` (
+-- pin
+CREATE TABLE IF NOT EXISTS `pin` (
     `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `account_id` BIGINT NOT NULL,
+    PRIMARY KEY (`id`),
+    FOREIGN KEY (`account_id`) REFERENCES `account` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- PinEmailAddresses
+CREATE TABLE IF NOT EXISTS `pin_email_addresses` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `pin_id` BIGINT NOT NULL,
+    `email_address` VARCHAR(255),
+    PRIMARY KEY (`id`),
+    FOREIGN KEY (`pin_id`) REFERENCES `pin` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Member
+CREATE TABLE IF NOT EXISTS `member` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `display_name` VARCHAR(255),
+    `email` VARCHAR(255),
+    `member_name` VARCHAR(255),
+    `profile_image_url` VARCHAR(255),
+    `primary_uid` VARCHAR(255),
+    `language` VARCHAR(10) DEFAULT 'en',
+    `theme` ENUM('LIGHT','DARK','SYSTEM') DEFAULT 'LIGHT',
+    `marketing_emails` BOOLEAN DEFAULT TRUE,
+    `deleted_at` DATETIME(6),
+    `security_emails` BOOLEAN DEFAULT TRUE,
+    `density` ENUM('COMPACT', 'COZY') DEFAULT 'COMPACT',
     `created_at` DATETIME(6),
     `updated_at` DATETIME(6),
     PRIMARY KEY (`id`)
-    ) ENGINE=InnoDB;
+) ENGINE=InnoDB;
 
--- Super Account Account UIDs
-CREATE TABLE IF NOT EXISTS `super_account_member_uids` (
-    `super_account_id` BIGINT NOT NULL,
-    `member_uid` VARCHAR(255),
-    PRIMARY KEY (`super_account_id`, `member_uid`),
-    FOREIGN KEY (`super_account_id`) REFERENCES `super_account` (`id`)
-    ) ENGINE=InnoDB;
-
--- Team
-CREATE TABLE IF NOT EXISTS `team` (
+-- MemberAccount
+CREATE TABLE IF NOT EXISTS `member_account` (
     `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `member_id` BIGINT,
+    `account_id` BIGINT,
+    PRIMARY KEY (`id`),
+    FOREIGN KEY (`member_id`) REFERENCES `member` (`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`account_id`) REFERENCES `account` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- accounts_watch_notifications
+CREATE TABLE IF NOT EXISTS `accounts_watch_notifications` (
+    `member_id` BIGINT NOT NULL,
+    `account_uid` VARCHAR(255) NOT NULL,
+    `notification_preference` ENUM('INBOX', 'IMPORTANT', 'OFF'),
+    PRIMARY KEY (`member_id`, `account_uid`),
+    FOREIGN KEY (`member_id`) REFERENCES `member` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- member_term_agreements
+CREATE TABLE IF NOT EXISTS `member_term_agreements` (
+    `member_id` BIGINT NOT NULL,
+    `agreement_type` VARCHAR(255) NOT NULL,
+    `timestamp` DATETIME(6),
+    PRIMARY KEY (`member_id`, `agreement_type`),
+    FOREIGN KEY (`member_id`) REFERENCES `member` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- member_marketing_agreements
+CREATE TABLE IF NOT EXISTS `member_marketing_agreements` (
+    `member_id` BIGINT NOT NULL,
+    `agreement_type` VARCHAR(255) NOT NULL,
+    `timestamp` DATETIME(6),
+    PRIMARY KEY (`member_id`, `agreement_type`),
+    FOREIGN KEY (`member_id`) REFERENCES `member` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Email Template
+CREATE TABLE IF NOT EXISTS `email_template` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `account_id` BIGINT,
+    `body` TEXT,
+    `subject` VARCHAR(255),
+    `template_name` VARCHAR(255),
+    PRIMARY KEY (`id`),
+    FOREIGN KEY (`account_id`) REFERENCES `account` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Email Recipient
+CREATE TABLE IF NOT EXISTS `email_recipient` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `email_template_id` BIGINT,
+    `email` VARCHAR(255),
+    `type` ENUM('BCC','CC','TO'),
+    PRIMARY KEY (`id`),
+    FOREIGN KEY (`email_template_id`) REFERENCES `email_template` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- FCM Token
+CREATE TABLE IF NOT EXISTS `fcm_token` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `account_id` BIGINT,
+    `fcm_token` VARCHAR(255),
+    `machine_uuid` VARCHAR(255),
+    PRIMARY KEY (`id`),
+    FOREIGN KEY (`account_id`) REFERENCES `account` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Pub Sub History
+CREATE TABLE IF NOT EXISTS `pub_sub_history` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `history_id` DECIMAL(38,0),
+    `account_id` BIGINT,
+    PRIMARY KEY (`id`),
+    FOREIGN KEY (`account_id`) REFERENCES `account` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- Verification Email
+CREATE TABLE IF NOT EXISTS `verification_email` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT,
+    `thread_id` VARCHAR(255),
+    `message_id` VARCHAR(255),
+    `codes` VARCHAR(255),
+    `links` VARCHAR(255),
+    `uuid` VARCHAR(255),
+    `account_id` BIGINT,
     `created_at` DATETIME(6),
-    `updated_at` DATETIME(6),
-    `creator_id` BIGINT,
-    `name` VARCHAR(255),
     PRIMARY KEY (`id`),
-    FOREIGN KEY (`creator_id`) REFERENCES `account` (`id`)
-    ) ENGINE=InnoDB;
+    FOREIGN KEY (`account_id`) REFERENCES `account`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB;
 
--- Team Invitation
-CREATE TABLE IF NOT EXISTS `team_invitation` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT,
-    `deleted` BIT NOT NULL,
-    `expires_at` DATETIME(6),
-    `sent_at` DATETIME(6),
-    `inviter_id` BIGINT,
-    `team_id` BIGINT,
+-- SharedEmail
+CREATE TABLE IF NOT EXISTS `shared_email` (
+    `id` BINARY(16) PRIMARY KEY,
+    `access` ENUM('RESTRICTED', 'PUBLIC'),
+    `data_id` VARCHAR(255),
+    `shared_data_type` ENUM('MESSAGE', 'THREAD'),
+    `owner_id` BIGINT,
+    `can_editor_edit_permission` BOOLEAN,
+    `can_viewer_view_tool_menu` BOOLEAN,
+    `created_at` DATETIME(6),
+    `updated_at` DATETIME(6)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS `shared_email_invitee` (
+    `shared_email_id` BINARY(16),
     `invitee_email` VARCHAR(255),
-    `token` VARCHAR(255),
-    `role` ENUM('ADMIN','EDITOR','PUBLIC_VIEWER','VIEWER'),
-    `status` ENUM('ACCEPTED','EXPIRED','PENDING','REJECTED'),
-    PRIMARY KEY (`id`),
-    FOREIGN KEY (`inviter_id`) REFERENCES `account` (`id`),
-    FOREIGN KEY (`team_id`) REFERENCES `team` (`id`)
-    ) ENGINE=InnoDB;
-
--- Team Account
-CREATE TABLE IF NOT EXISTS `team_member` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT,
-    `member_id` BIGINT,
-    `team_id` BIGINT,
-    `role` ENUM('ADMIN','EDITOR','PUBLIC_VIEWER','VIEWER'),
-    PRIMARY KEY (`id`),
-    FOREIGN KEY (`member_id`) REFERENCES `account` (`id`),
-    FOREIGN KEY (`team_id`) REFERENCES `team` (`id`)
-    ) ENGINE=InnoDB;
-
--- User Sidebar Config
-CREATE TABLE IF NOT EXISTS `user_sidebar_config` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT,
-    `member_id` BIGINT,
-    `sidebar_config` TEXT,
-    PRIMARY KEY (`id`),
-    UNIQUE (`member_id`),
-    FOREIGN KEY (`member_id`) REFERENCES `account` (`id`)
-    ) ENGINE=InnoDB;
+    `permission` ENUM('EDITOR', 'COMMENTER', 'VIEWER', 'PUBLIC_VIEWER'),
+    PRIMARY KEY (`shared_email_id`),
+    FOREIGN KEY (`shared_email_id`) REFERENCES `shared_email`(`id`)
+) ENGINE=InnoDB;

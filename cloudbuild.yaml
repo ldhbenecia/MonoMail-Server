@@ -7,6 +7,14 @@ steps:
       - |
         gcloud secrets versions access latest --secret="serviceAccountKey" > serviceAccountKey.json
 
+  # Retrieve the latest version of the 'application-dev.yml' secret from Secrets Manager
+  - name: 'gcr.io/cloud-builders/gcloud'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        gcloud secrets versions access latest --secret="application-dev" > application-dev.yml
+
   # Retrieve the latest version of the 'application-prod.yml' secret from Secrets Manager
   - name: 'gcr.io/cloud-builders/gcloud'
     entrypoint: 'bash'
@@ -15,13 +23,16 @@ steps:
       - |
         gcloud secrets versions access latest --secret="application-prod" > application-prod.yml
 
-  # Build the container image
+  # Build the container image based on the branch
   - name: 'gcr.io/cloud-builders/docker'
-    args: [
-      'build',
-      '-t', 'us-central1-docker.pkg.dev/echo-dev-435808/cloud-run-source-deploy/echo-dev/echo-dev:$COMMIT_SHA',
-      '.'
-    ]
+    args:
+      - 'build'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/echo-dev-435808/cloud-run-source-deploy/echo-dev/echo-dev:$COMMIT_SHA'
+      - '--file'
+      - |
+        $(if [[ "$BRANCH_NAME" == "main" ]]; then echo "Dockerfile.prod"; elif [[ "$BRANCH_NAME" == "develop" ]]; then echo "Dockerfile.dev"; fi)
+      - '.'
 
   # Push the container image to Container Registry
   - name: 'gcr.io/cloud-builders/docker'
