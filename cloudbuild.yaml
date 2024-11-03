@@ -31,7 +31,7 @@ steps:
       - 'us-central1-docker.pkg.dev/echo-dev-435808/cloud-run-source-deploy/echo-dev/echo-dev:$COMMIT_SHA'
       - '--file'
       - |
-        $(if [[ "$BRANCH_NAME" == "main" ]]; then echo "Dockerfile.prod"; else echo "Dockerfile.dev"; fi)
+        $(if [[ "$BRANCH_NAME" == "main" ]]; then echo "Dockerfile.prod"; elif [[ "$BRANCH_NAME" == "develop" ]]; then echo "Dockerfile.dev"; fi)
       - '.'
 
   # Push the container image to Container Registry
