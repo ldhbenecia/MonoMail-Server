@@ -115,8 +115,11 @@ public class PubSubService {
                         .putAllData(data)
                         .addAllTokens(fcmTokens)
                         .build();
+                System.out.println(data);
                 FirebaseMessaging.getInstance().sendEachForMulticastAsync(message);
             } catch (Exception e) {
+                e.printStackTrace();
+                System.out.println(e.getMessage());
                 throw new CustomErrorException(ErrorCode.FAILED_TO_GET_GMAIL_CONNECTION_REQUEST, ErrorCode.FAILED_TO_GET_GMAIL_CONNECTION_REQUEST.getMessage());
             }
         }
@@ -161,7 +164,7 @@ public class PubSubService {
         ListHistoryResponse historyResponse = gmailService.users().history()
                 .list(USER_ID)
                 .setStartHistoryId(historyId)
-                .setLabelId(PUB_SUB_LABEL_ID)
+                //.setLabelId(PUB_SUB_LABEL_ID)
                 .setMaxResults(MAX_HISTORY_COUNT)
                 .execute();
         List<History> histories = historyResponse.getHistory();

@@ -26,10 +26,15 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import woozlabs.echo.domain.gmail.dto.autoForwarding.AutoForwardingResponse;
 import woozlabs.echo.domain.gmail.dto.draft.*;
@@ -249,7 +254,6 @@ public class GmailService {
         }
     }
 
-    @Async
     public void sendUserEmailMessage(String accessToken, GmailMessageSendRequest request) {
         try{
             Gmail gmailService = gmailUtility.createGmailService(accessToken);
@@ -269,6 +273,25 @@ public class GmailService {
                     file.delete();
                 }
             }
+        }
+    }
+
+    public void sendUserEmailMessageWithAtt(String accessToken, GmailMessageSendRequestWithAtt request){
+        try{
+            Gmail gmailService = gmailUtility.createGmailService(accessToken);
+            Profile profile = gmailService.users().getProfile(USER_ID).execute();
+            String fromEmailAddress = profile.getEmailAddress();
+            request.setFromEmailAddress(fromEmailAddress);
+            MimeMessage mimeMessage = createEmailWithAtt(request);
+            System.out.println("!!!");
+            String uploadUrl = initiateResumableSession(accessToken);
+            System.out.println(uploadUrl);
+            uploadEmailData(accessToken, uploadUrl, mimeMessage);
+        }catch (Exception e){
+            e.printStackTrace();
+            throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE,
+                    ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE.getMessage()
+            );
         }
     }
 
@@ -841,12 +864,16 @@ public class GmailService {
             Long timeStamp = lastMessageInFirstThread.getTimestamp();
             String timeZone = lastMessageInFirstThread.getTimezone();
             Instant instant = Instant.ofEpochMilli(timeStamp);
-            ZonedDateTime zonedDateTime = instant.atZone(ZoneId.of(timeZone));
-            LocalDate firstThreadDate = zonedDateTime.toLocalDate();
-            // check validation
-            LocalDate beforeSixtyDays = currentDate.minusDays(60);
-            if(firstThreadDate.isBefore(beforeSixtyDays)){
-                throw new CustomErrorException(ErrorCode.BILLING_ERROR_MESSAGE, ErrorCode.BILLING_ERROR_MESSAGE.getMessage());
+            try{
+                ZonedDateTime zonedDateTime = instant.atZone(ZoneId.of(timeZone));
+                LocalDate firstThreadDate = zonedDateTime.toLocalDate();
+                // check validation
+                LocalDate beforeSixtyDays = currentDate.minusDays(60);
+                if(firstThreadDate.isBefore(beforeSixtyDays)){
+                    throw new CustomErrorException(ErrorCode.BILLING_ERROR_MESSAGE, ErrorCode.BILLING_ERROR_MESSAGE.getMessage());
+                }
+            }catch (Exception e){
+                log.error("ZoneId Error: " + timeZone);
             }
         }
     }
@@ -859,12 +886,16 @@ public class GmailService {
             Long timeStamp = draftMessage.getTimestamp();
             String timeZone = draftMessage.getTimezone();
             Instant instant = Instant.ofEpochMilli(timeStamp);
-            ZonedDateTime zonedDateTime = instant.atZone(ZoneId.of(timeZone));
-            LocalDate firstThreadDate = zonedDateTime.toLocalDate();
-            // check validation
-            LocalDate beforeSixtyDays = currentDate.minusDays(60);
-            if(firstThreadDate.isBefore(beforeSixtyDays)){
-                throw new CustomErrorException(ErrorCode.BILLING_ERROR_MESSAGE, ErrorCode.BILLING_ERROR_MESSAGE.getMessage());
+            try{
+                ZonedDateTime zonedDateTime = instant.atZone(ZoneId.of(timeZone));
+                LocalDate firstThreadDate = zonedDateTime.toLocalDate();
+                // check validation
+                LocalDate beforeSixtyDays = currentDate.minusDays(60);
+                if(firstThreadDate.isBefore(beforeSixtyDays)){
+                    throw new CustomErrorException(ErrorCode.BILLING_ERROR_MESSAGE, ErrorCode.BILLING_ERROR_MESSAGE.getMessage());
+                }
+            }catch (Exception e){
+                log.error("ZoneId Error: " + timeZone);
             }
         }
     }
@@ -1026,6 +1057,105 @@ public class GmailService {
         }
         email.setContent(multipart);
         return email;
+    }
+
+    private MimeMessage createEmailWithAtt(GmailMessageSendRequestWithAtt request) throws MessagingException {
+        Properties props = new Properties();
+        Session session = Session.getDefaultInstance(props, null);
+        MimeMessage email = new MimeMessage(session);
+        // setting base
+        email.setFrom(new InternetAddress(request.getFromEmailAddress()));
+        // handling multiple recipients
+        for (String recipient : request.getToEmailAddresses()) {
+            email.addRecipient(jakarta.mail.Message.RecipientType.TO, new InternetAddress(recipient));
+        }
+        // handling multiple CC recipients
+        if (request.getCcEmailAddresses() != null) {
+            for (String ccRecipient : request.getCcEmailAddresses()) {
+                email.addRecipient(jakarta.mail.Message.RecipientType.CC, new InternetAddress(ccRecipient));
+            }
+        }
+        // handling multiple BCC recipients
+        if (request.getBccEmailAddresses() != null) {
+            for (String bccRecipient : request.getBccEmailAddresses()) {
+                email.addRecipient(jakarta.mail.Message.RecipientType.BCC, new InternetAddress(bccRecipient));
+            }
+        }
+        email.setSubject(request.getSubject());
+        // setting body
+        Multipart multipart = new MimeMultipart();
+        MimeBodyPart htmlPart = new MimeBodyPart();
+        String bodyText = request.getBodyText();
+        Document doc = Jsoup.parse(bodyText);
+        Element body = doc.body();
+        List<GmailMessageInlineImage> base64Images = new ArrayList<>();
+        Pattern pattern = Pattern.compile("data:(.*?);base64,([^\"']*)");
+        int cidNum = 0;
+        for(Element element : body.children()){
+            if(element.tagName().equals("img") && element.attr("src").startsWith("data:")){
+                String src = element.attr("src");
+                Matcher matcher = pattern.matcher(src);
+                if (matcher.find()) {
+                    String mimeType = matcher.group(1);
+                    String base64Data = matcher.group(2);
+                    byte[] imageData = java.util.Base64.getDecoder().decode(base64Data);
+                    base64Images.add(new GmailMessageInlineImage(mimeType, imageData));
+                }
+                element.attr("src", "cid:image" + cidNum);
+            }
+        }
+        htmlPart.setContent(body.toString(), "text/html");
+        multipart.addBodyPart(htmlPart);
+
+        if (request.getFiles() != null && !request.getFiles().isEmpty()) {
+            for (int i = 0; i < request.getFiles().size(); i++) {
+                MimeBodyPart attachmentPart = new MimeBodyPart();
+                attachmentPart.setContent(request.getFiles().get(i), "application/octet-stream");
+                attachmentPart.setFileName(request.getFileNames().get(i));
+                multipart.addBodyPart(attachmentPart);
+            }
+        }
+
+        for(int i = 0;i < base64Images.size();i++){
+            GmailMessageInlineImage inlineFile = base64Images.get(i);
+            MimeBodyPart imagePart = new MimeBodyPart();
+            imagePart.setContent(inlineFile.getData(), inlineFile.getMimeType());
+            imagePart.setFileName("image.png");
+            imagePart.setContentID("<image" + i + ">");
+            imagePart.setDisposition(MimeBodyPart.INLINE);
+            multipart.addBodyPart(imagePart);
+        }
+        email.setContent(multipart);
+        return email;
+    }
+
+    private void uploadEmailData(String accessToken, String uploadUrl, MimeMessage email) throws IOException, MessagingException {
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        RestTemplate restTemplate = new RestTemplate();
+        email.writeTo(buffer);
+        byte[] emailData = buffer.toByteArray();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("message/rfc822"));
+        headers.setBearerAuth(accessToken);
+        headers.setContentLength(emailData.length);
+
+        HttpEntity<byte[]> entity = new HttpEntity<>(emailData, headers);
+        restTemplate.exchange(uploadUrl, HttpMethod.PUT, entity, String.class);
+    }
+
+    private String initiateResumableSession(String accessToken) {
+        String initiateUrl = String.format("https://www.googleapis.com/upload/gmail/v1/users/%s/messages/send?uploadType=resumable", USER_ID);
+        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(accessToken);
+        headers.add("X-Upload-Content-Type", "message/rfc822");
+
+        HttpEntity<String> entity = new HttpEntity<>("", headers);
+        String uploadUrl = restTemplate.exchange(initiateUrl, HttpMethod.POST, entity, String.class).getHeaders().getLocation().toString();
+
+        return uploadUrl;
     }
 
     private MimeMessage createDraft(GmailDraftCommonRequest request) throws MessagingException {
