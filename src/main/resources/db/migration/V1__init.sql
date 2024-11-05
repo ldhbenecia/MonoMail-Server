@@ -35,12 +35,10 @@ CREATE TABLE IF NOT EXISTS `signature` (
     `id` BIGINT NOT NULL AUTO_INCREMENT,
     `created_at` DATETIME(6),
     `updated_at` DATETIME(6),
-    `owner_id` BIGINT,
-    `name` VARCHAR(255),
+    `account_id` BIGINT,
     `content` TINYTEXT,
-    `type` ENUM('MEMBER','TEAM'),
     PRIMARY KEY (`id`),
-    FOREIGN KEY (`owner_id`) REFERENCES `account` (`id`) ON DELETE CASCADE
+    FOREIGN KEY (`accoount_id`) REFERENCES `account` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- pin
