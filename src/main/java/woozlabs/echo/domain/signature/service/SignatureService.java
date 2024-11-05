@@ -6,6 +6,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import woozlabs.echo.domain.member.entity.Account;
 import woozlabs.echo.domain.member.entity.Member;
 import woozlabs.echo.domain.member.entity.MemberAccount;
@@ -19,6 +20,7 @@ import woozlabs.echo.global.exception.CustomErrorException;
 import woozlabs.echo.global.exception.ErrorCode;
 
 @Service
+@Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class SignatureService {
 
@@ -57,5 +59,34 @@ public class SignatureService {
         }
 
         return new SignatureResponseDto(signaturesMap);
+    }
+
+    @Transactional
+    public void deleteSignature(String uid, Long signatureId, boolean isDirectAccountRequest) {
+        Account account = accountRepository.findByUid(uid)
+                .orElseThrow(() -> new CustomErrorException(ErrorCode.NOT_FOUND_ACCOUNT_ERROR_MESSAGE));
+
+        Signature signature = signatureRepository.findById(signatureId)
+                .orElseThrow(() -> new CustomErrorException(ErrorCode.NOT_FOUND_SIGNATURE));
+
+        if (isDirectAccountRequest) {
+            // aAUid가 들어온 경우 - 해당 Account의 시그니처만 삭제 예외처리
+            if (!signature.getAccount().equals(account)) {
+                throw new CustomErrorException(ErrorCode.UNAUTHORIZED_ACCESS);
+            }
+        } else {
+            // aAUid가 없는 경우 - 해당 uid를 primaryUid로 가지는 Member의 accounts들만 삭제 가능 처리
+            Member member = memberRepository.findByPrimaryUid(uid)
+                    .orElseThrow(() -> new CustomErrorException(ErrorCode.NOT_FOUND_MEMBER));
+
+            boolean hasAccess = member.getMemberAccounts().stream()
+                    .anyMatch(memberAccount -> memberAccount.getAccount().equals(signature.getAccount()));
+
+            if (!hasAccess) {
+                throw new CustomErrorException(ErrorCode.UNAUTHORIZED_ACCESS);
+            }
+        }
+
+        signatureRepository.delete(signature);
     }
 }
