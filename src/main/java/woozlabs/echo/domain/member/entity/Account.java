@@ -9,7 +9,6 @@ import jakarta.persistence.OneToMany;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,7 +16,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import woozlabs.echo.domain.echo.entity.EmailTemplate;
 import woozlabs.echo.domain.echo.entity.UserBookmark;
-import woozlabs.echo.domain.signature.Signature;
+import woozlabs.echo.domain.signature.entity.Signature;
 import woozlabs.echo.global.common.entity.BaseEntity;
 
 @Entity
@@ -58,12 +57,6 @@ public class Account extends BaseEntity {
     // @OneToMany(mappedBy = "account", cascade = CascadeType.ALL)
     // private List<AccountContactGroup> accountContactGroups = new ArrayList<>();
 
-    @OneToMany(mappedBy = "ownerId", cascade = CascadeType.ALL)
-    private List<Signature> allSignatures = new ArrayList<>();
-
-    public List<Signature> getSignatures() {
-        return allSignatures.stream()
-                .filter(signature -> signature.getType() == Signature.SignatureType.MEMBER)
-                .collect(Collectors.toList());
-    }
+    @OneToMany(mappedBy = "account", cascade = CascadeType.ALL)
+    private List<Signature> signatures = new ArrayList<>();
 }
