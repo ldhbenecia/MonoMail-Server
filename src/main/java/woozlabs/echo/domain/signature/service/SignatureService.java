@@ -29,16 +29,16 @@ public class SignatureService {
     private final MemberRepository memberRepository;
 
     public SignatureResponseDto getSignatures(final String uid, final boolean isDirectAccountRequest) {
-        final Map<String, List<String>> signaturesMap = new HashMap<>();
+        final Map<String, Map<Long, String>> signaturesMap = new HashMap<>();
 
         if (isDirectAccountRequest) {
             // aAUid가 들어온 경우 - 특정 Account의 시그니처만 반환
             final Account account = accountRepository.findByUid(uid)
                     .orElseThrow(() -> new CustomErrorException(ErrorCode.NOT_FOUND_ACCOUNT_ERROR_MESSAGE));
 
-            final List<String> signatures = account.getSignatures().stream()
-                    .map(Signature::getContent)
-                    .collect(Collectors.toList());
+            final Map<Long, String> signatures = account.getSignatures().stream()
+                    .collect(Collectors.toMap(Signature::getId, Signature::getContent));
+
             signaturesMap.put(account.getUid(), signatures);
         } else {
             // aAUid가 없는 경우 - 해당 uid를 primaryUid로 가지는 Member의 모든 Account 시그니처 반환
@@ -50,9 +50,8 @@ public class SignatureService {
                     .collect(Collectors.toList());
 
             for (final Account memberAccount : memberAccounts) {
-                final List<String> signatures = memberAccount.getSignatures().stream()
-                        .map(Signature::getContent)
-                        .collect(Collectors.toList());
+                final Map<Long, String> signatures = memberAccount.getSignatures().stream()
+                        .collect(Collectors.toMap(Signature::getId, Signature::getContent));
                 signaturesMap.put(memberAccount.getUid(), signatures);
             }
         }

@@ -1,6 +1,5 @@
 package woozlabs.echo.domain.signature.dto;
 
-import java.util.List;
 import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -9,5 +8,5 @@ import lombok.Getter;
 @AllArgsConstructor
 public class SignatureResponseDto {
 
-    Map<String, List<String>> signatures;
+    Map<String, Map<Long, String>> signatures;
 }
