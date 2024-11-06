@@ -8,12 +8,17 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import woozlabs.echo.domain.member.entity.Account;
 import woozlabs.echo.global.common.entity.BaseEntity;
 
 @Entity
 @Getter
+@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Signature extends BaseEntity {
 
     @Id
@@ -26,4 +31,8 @@ public class Signature extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "account_id")
     private Account account;
+
+    public static Signature of(final String content, final Account account) {
+        return new Signature(null, content, account);
+    }
 }
