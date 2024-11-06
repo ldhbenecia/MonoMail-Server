@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -47,6 +48,15 @@ public class SignatureController {
     public ResponseEntity<Void> createSignature(@RequestParam("aAUid") final String activeAccountUid,
                                                 @RequestBody final SignatureRequestDto signatureRequestDto) {
         signatureService.createSignature(activeAccountUid, signatureRequestDto);
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/signature/{signatureId}")
+    public ResponseEntity<Void> updateSignature(HttpServletRequest httpServletRequest,
+                                                @PathVariable("signatureId") Long signatureId,
+                                                @RequestBody SignatureRequestDto signatureRequestDto) {
+        final String uid = (String) httpServletRequest.getAttribute("uid");
+        signatureService.updateSignature(uid, signatureId, signatureRequestDto);
         return ResponseEntity.ok().build();
     }
 }

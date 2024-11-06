@@ -98,4 +98,22 @@ public class SignatureService {
 
         signatureRepository.save(signature);
     }
+
+    @Transactional
+    public void updateSignature(String uid, Long signatureId, SignatureRequestDto signatureRequestDto) {
+        final Member member = memberRepository.findByPrimaryUid(uid)
+                .orElseThrow(() -> new CustomErrorException(ErrorCode.NOT_FOUND_MEMBER));
+
+        final Signature signature = signatureRepository.findById(signatureId)
+                .orElseThrow(() -> new CustomErrorException(ErrorCode.NOT_FOUND_SIGNATURE));
+
+        boolean hasAccess = member.getMemberAccounts().stream()
+                .anyMatch(memberAccount -> memberAccount.getAccount().equals(signature.getAccount()));
+
+        if (!hasAccess) {
+            throw new CustomErrorException(ErrorCode.UNAUTHORIZED_ACCESS);
+        }
+
+        signature.update(signatureRequestDto.getContent());
+    }
 }

@@ -35,4 +35,8 @@ public class Signature extends BaseEntity {
     public static Signature of(final String content, final Account account) {
         return new Signature(null, content, account);
     }
+
+    public void update(String content) {
+        this.content = content;
+    }
 }
