@@ -21,21 +21,20 @@ public class SignatureController {
 
     @GetMapping("/signature")
     public ResponseEntity<SignatureResponseDto> getSignatures(HttpServletRequest httpServletRequest,
-                                                              @RequestParam(value = "aAUid", required = false) String activeAccountUid) {
-        boolean isDirectAccountRequest = (activeAccountUid != null);
-        String uid = isDirectAccountRequest ? activeAccountUid : (String) httpServletRequest.getAttribute("uid");
+                                                              @RequestParam(value = "aAUid", required = false) final String activeAccountUid) {
+        final boolean isDirectAccountRequest = (activeAccountUid != null);
+        final String uid = isDirectAccountRequest ? activeAccountUid : (String) httpServletRequest.getAttribute("uid");
 
-        SignatureResponseDto response = signatureService.getSignatures(uid, isDirectAccountRequest);
+        final SignatureResponseDto response = signatureService.getSignatures(uid, isDirectAccountRequest);
         return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/signature/{signatureId}")
     public ResponseEntity<Void> deleteSignature(HttpServletRequest httpServletRequest,
-                                                @PathVariable("signatureId") Long signatureId,
-                                                @RequestParam(value = "aAUid", required = false) String activeAccountUid) {
-
-        boolean isDirectAccountRequest = (activeAccountUid != null);
-        String uid = isDirectAccountRequest ? activeAccountUid : (String) httpServletRequest.getAttribute("uid");
+                                                @PathVariable("signatureId") final Long signatureId,
+                                                @RequestParam(value = "aAUid", required = false) final String activeAccountUid) {
+        final boolean isDirectAccountRequest = (activeAccountUid != null);
+        final String uid = isDirectAccountRequest ? activeAccountUid : (String) httpServletRequest.getAttribute("uid");
 
         signatureService.deleteSignature(uid, signatureId, isDirectAccountRequest);
         return ResponseEntity.noContent().build();
