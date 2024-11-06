@@ -5,7 +5,9 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,6 +22,9 @@ import woozlabs.echo.domain.signature.entity.Signature;
 import woozlabs.echo.global.common.entity.BaseEntity;
 
 @Entity
+@Table(indexes = {
+        @Index(name = "idx_uid", columnList = "uid", unique = true),
+})
 @Getter
 @Setter
 @Builder
