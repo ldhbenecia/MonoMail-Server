@@ -60,29 +60,18 @@ public class SignatureService {
     }
 
     @Transactional
-    public void deleteSignature(final String uid, final Long signatureId, final boolean isDirectAccountRequest) {
-        final Account account = accountRepository.findByUid(uid)
-                .orElseThrow(() -> new CustomErrorException(ErrorCode.NOT_FOUND_ACCOUNT_ERROR_MESSAGE));
+    public void deleteSignature(final String uid, final Long signatureId) {
+        final Member member = memberRepository.findByPrimaryUid(uid)
+                .orElseThrow(() -> new CustomErrorException(ErrorCode.NOT_FOUND_MEMBER));
 
         final Signature signature = signatureRepository.findById(signatureId)
                 .orElseThrow(() -> new CustomErrorException(ErrorCode.NOT_FOUND_SIGNATURE));
 
-        if (isDirectAccountRequest) {
-            // aAUid가 들어온 경우 - 해당 Account의 시그니처만 삭제 예외처리
-            if (!signature.getAccount().equals(account)) {
-                throw new CustomErrorException(ErrorCode.UNAUTHORIZED_ACCESS);
-            }
-        } else {
-            // aAUid가 없는 경우 - 해당 uid를 primaryUid로 가지는 Member의 accounts들만 삭제 가능 처리
-            final Member member = memberRepository.findByPrimaryUid(uid)
-                    .orElseThrow(() -> new CustomErrorException(ErrorCode.NOT_FOUND_MEMBER));
+        boolean hasAccess = member.getMemberAccounts().stream()
+                .anyMatch(memberAccount -> memberAccount.getAccount().equals(signature.getAccount()));
 
-            final boolean hasAccess = member.getMemberAccounts().stream()
-                    .anyMatch(memberAccount -> memberAccount.getAccount().equals(signature.getAccount()));
-
-            if (!hasAccess) {
-                throw new CustomErrorException(ErrorCode.UNAUTHORIZED_ACCESS);
-            }
+        if (!hasAccess) {
+            throw new CustomErrorException(ErrorCode.UNAUTHORIZED_ACCESS);
         }
 
         signatureRepository.delete(signature);

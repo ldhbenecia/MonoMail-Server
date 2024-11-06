@@ -35,12 +35,9 @@ public class SignatureController {
 
     @DeleteMapping("/signature/{signatureId}")
     public ResponseEntity<Void> deleteSignature(HttpServletRequest httpServletRequest,
-                                                @PathVariable("signatureId") final Long signatureId,
-                                                @RequestParam(value = "aAUid", required = false) final String activeAccountUid) {
-        final boolean isDirectAccountRequest = (activeAccountUid != null);
-        final String uid = isDirectAccountRequest ? activeAccountUid : (String) httpServletRequest.getAttribute("uid");
-
-        signatureService.deleteSignature(uid, signatureId, isDirectAccountRequest);
+                                                @PathVariable("signatureId") final Long signatureId) {
+        final String uid = (String) httpServletRequest.getAttribute("uid");
+        signatureService.deleteSignature(uid, signatureId);
         return ResponseEntity.noContent().build();
     }
 
