@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS `account` (
     `created_at` DATETIME(6),
     `updated_at` DATETIME(6),
     PRIMARY KEY (`id`)
+    UNIQUE INDEX `idx_uid` (`uid`);
 ) ENGINE=InnoDB;
 
 -- bookmark
@@ -27,6 +28,7 @@ CREATE TABLE IF NOT EXISTS `user_bookmark` (
     `title` VARCHAR(255),
     `icon` VARCHAR(255),
     PRIMARY KEY (`id`),
+    INDEX `idx_account_id` (`account_id`);
     FOREIGN KEY (`account_id`) REFERENCES `account` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
@@ -35,12 +37,11 @@ CREATE TABLE IF NOT EXISTS `signature` (
     `id` BIGINT NOT NULL AUTO_INCREMENT,
     `created_at` DATETIME(6),
     `updated_at` DATETIME(6),
-    `owner_id` BIGINT,
-    `name` VARCHAR(255),
+    `account_id` BIGINT,
     `content` TINYTEXT,
-    `type` ENUM('MEMBER','TEAM'),
     PRIMARY KEY (`id`),
-    FOREIGN KEY (`owner_id`) REFERENCES `account` (`id`) ON DELETE CASCADE
+    INDEX `idx_account_id` (`account_id`);
+    FOREIGN KEY (`account_id`) REFERENCES `account` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- pin
@@ -48,6 +49,7 @@ CREATE TABLE IF NOT EXISTS `pin` (
     `id` BIGINT NOT NULL AUTO_INCREMENT,
     `account_id` BIGINT NOT NULL,
     PRIMARY KEY (`id`),
+    INDEX `idx_account_id` (`account_id`);
     FOREIGN KEY (`account_id`) REFERENCES `account` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
@@ -77,6 +79,7 @@ CREATE TABLE IF NOT EXISTS `member` (
     `created_at` DATETIME(6),
     `updated_at` DATETIME(6),
     PRIMARY KEY (`id`)
+    UNIQUE INDEX `idx_primary_uid` (`primary_uid`);
 ) ENGINE=InnoDB;
 
 -- MemberAccount
@@ -124,6 +127,7 @@ CREATE TABLE IF NOT EXISTS `email_template` (
     `subject` VARCHAR(255),
     `template_name` VARCHAR(255),
     PRIMARY KEY (`id`),
+    INDEX `idx_account_id` (`account_id`)
     FOREIGN KEY (`account_id`) REFERENCES `account` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
