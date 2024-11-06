@@ -6,9 +6,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import woozlabs.echo.domain.signature.dto.SignatureRequestDto;
 import woozlabs.echo.domain.signature.dto.SignatureResponseDto;
 import woozlabs.echo.domain.signature.service.SignatureService;
 
@@ -38,5 +41,12 @@ public class SignatureController {
 
         signatureService.deleteSignature(uid, signatureId, isDirectAccountRequest);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/signature")
+    public ResponseEntity<Void> createSignature(@RequestParam("aAUid") final String activeAccountUid,
+                                                @RequestBody final SignatureRequestDto signatureRequestDto) {
+        signatureService.createSignature(activeAccountUid, signatureRequestDto);
+        return ResponseEntity.ok().build();
     }
 }

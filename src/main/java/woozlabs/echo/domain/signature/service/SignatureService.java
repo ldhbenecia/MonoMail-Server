@@ -12,6 +12,7 @@ import woozlabs.echo.domain.member.entity.Member;
 import woozlabs.echo.domain.member.entity.MemberAccount;
 import woozlabs.echo.domain.member.repository.AccountRepository;
 import woozlabs.echo.domain.member.repository.MemberRepository;
+import woozlabs.echo.domain.signature.dto.SignatureRequestDto;
 import woozlabs.echo.domain.signature.dto.SignatureResponseDto;
 import woozlabs.echo.domain.signature.entity.Signature;
 import woozlabs.echo.domain.signature.repository.SignatureRepository;
@@ -86,5 +87,15 @@ public class SignatureService {
         }
 
         signatureRepository.delete(signature);
+    }
+
+    @Transactional
+    public void createSignature(final String uid, final SignatureRequestDto signatureRequestDto) {
+        final Account account = accountRepository.findByUid(uid)
+                .orElseThrow(() -> new CustomErrorException(ErrorCode.NOT_FOUND_ACCOUNT_ERROR_MESSAGE));
+
+        final Signature signature = Signature.of(signatureRequestDto.getContent(), account);
+
+        signatureRepository.save(signature);
     }
 }
