@@ -110,6 +110,9 @@ public enum ErrorCode {
     NOT_FOUND_EMAIL_TEMPLATE(404, "Not Found: EmailTemplate"),
     UNAUTHORIZED_ACCESS_TO_TEMPLATE(401, "Unauthorized access to template"),
 
+    // signature
+    NOT_FOUND_SIGNATURE(404, "Not Found: Signature"),
+
     // Side Bar
     NOT_FOUND_SIDE_BAR_CONFIG(404, "Not Found: SideBar Config"),
     INVALID_ACCOUNT_UID(400, "Is not linked to the primary account's super account"),
