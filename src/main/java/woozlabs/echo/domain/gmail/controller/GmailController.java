@@ -241,15 +241,15 @@ public class GmailController {
 
     @PostMapping("/api/v1/gmail/messages/send/cancel")
     public ResponseEntity<?> cancelSendMessage(HttpServletRequest httpServletRequest,
-                                                    @RequestParam("messageId") String messageId,
+                                                    @RequestParam("taskId") String taskId,
                                                     @RequestParam("aAUid") String aAUid) {
         log.info("Request to cancel send message");
-        String accessToken = gmailUtility.getActiveAccountAccessToken(httpServletRequest, aAUid);
-        gmailService.cancelSendMessage(accessToken, messageId);
+        gmailUtility.getActiveAccountAccessToken(httpServletRequest, aAUid);
+        gmailService.cancelSendMessage(aAUid, taskId);
         return new ResponseEntity<>(HttpStatus.OK);
     }
 
-    @PostMapping("/api/v1/gmail/messages/send3")
+    @PostMapping("/api/v1/gmail/messages/send/lazy")
     public ResponseEntity<?> sendLazyUserEmailMessage(HttpServletRequest httpServletRequest,
                                          @RequestParam("mailto") String toEmailAddresses,
                                          @RequestParam(value = "cc", required = false) String ccEmailAddresses,
@@ -274,8 +274,8 @@ public class GmailController {
                 .messageId(messageId)
                 .build();
         // request send message to cloud task
-        gmailService.sendMessageWithCloudTask(httpServletRequest, request);
-        return new ResponseEntity<>(messageId, HttpStatus.CREATED);
+        GmailMessageLazySendResponse response = gmailService.sendMessageWithCloudTask(httpServletRequest, request);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     @GetMapping("/api/v1/gmail/drafts")

@@ -1,15 +1,9 @@
 package woozlabs.echo.domain.gmail.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
-import com.google.api.client.http.HttpRequestInitializer;
-import com.google.api.gax.core.FixedCredentialsProvider;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.*;
 import com.google.api.services.gmail.model.Thread;
-import com.google.auth.http.HttpCredentialsAdapter;
-import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.cloud.tasks.v2.*;
 import com.google.protobuf.ByteString;
@@ -28,11 +22,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.binary.Base64;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
-import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -46,8 +37,6 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import woozlabs.echo.domain.gmail.dto.autoForwarding.AutoForwardingResponse;
@@ -77,7 +66,6 @@ import woozlabs.echo.global.utils.GlobalUtility;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.time.*;
@@ -807,7 +795,7 @@ public class GmailService {
     }
 
     // cancel message test
-    public void sendMessageWithCloudTask(HttpServletRequest httpServletRequest, GmailMessageLazySendRequest request){
+    public GmailMessageLazySendResponse sendMessageWithCloudTask(HttpServletRequest httpServletRequest, GmailMessageLazySendRequest request){
         try{
             // create cloud task queue object
             CloudTasksClient tasksClient = CloudTasksClient.create(CloudTasksSettings.newBuilder()
@@ -815,6 +803,8 @@ public class GmailService {
                     .build());
             QueueName cloudTaskQueue = QueueName.of(projectId, locationId, queueId);
             String url = String.format("https://9dcd-121-165-252-83.ngrok-free.app/api/v1/gmail/messages/send?aAUid=%s", request.getAAUid());
+            if(request.getType() != null) url += "&type=" + request.getType();
+            if(request.getMessageId() != null) url += "&echoMessageId=" + request.getMessageId();
             // http request obj
 
             org.apache.http.HttpEntity entity = createMultipartPayload(request);
@@ -834,8 +824,13 @@ public class GmailService {
             httpRequestBuilder.putHeaders("Content-Type", entity.getContentType().getValue());
 
             // Set the HTTP request in the task
-            taskBuilder.setHttpRequest(httpRequestBuilder.build());
-            Instant delayTime = Instant.now().plusSeconds(10);
+            String taskId = UUID.randomUUID() + "-" + request.getAAUid();
+            String taskName = TaskName.of(projectId, locationId, queueId, taskId).toString();
+            taskBuilder
+                    .setHttpRequest(httpRequestBuilder.build())
+                    .setName(taskName)
+                    .build();
+            Instant delayTime = Instant.now().plusSeconds(30);
             com.google.protobuf.Timestamp scheduleTime = Timestamp.newBuilder()
                     .setSeconds(delayTime.getEpochSecond())
                     .setNanos(delayTime.getNano())
@@ -843,13 +838,34 @@ public class GmailService {
             taskBuilder.setScheduleTime(scheduleTime);
             tasksClient.createTask(cloudTaskQueue, taskBuilder.build());
             log.info("Register lazy send message request to Cloud Task");
+            return GmailMessageLazySendResponse.builder()
+                    .taskId(taskId)
+                    .build();
         }catch (Exception e){
-            throw new IllegalArgumentException("Error");
+            throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE,
+                    ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE.getMessage()
+            );
         }
     }
 
-    public void cancelSendMessage(String accessToken, String echoMessageId){
-        System.out.println("Canceled send message request");
+    public void cancelSendMessage(String aAUid, String taskId) {
+        try{
+            // create cloud task queue object
+            CloudTasksClient tasksClient = CloudTasksClient.create(CloudTasksSettings.newBuilder()
+                    .setCredentialsProvider(this::getDefaultServiceAccount)
+                    .build());
+            // validation check
+            TaskName taskName = TaskName.of(projectId, locationId, queueId, taskId);
+            DeleteTaskRequest deleteTaskRequest = DeleteTaskRequest.newBuilder()
+                    .setName(taskName.toString())
+                    .build();
+            tasksClient.deleteTask(deleteTaskRequest);
+            log.info("Cancel lazy send message request to Cloud Task");
+        }catch (Exception e){
+            throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_CANCEL_API_ERROR_MESSAGE,
+                    ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_CANCEL_API_ERROR_MESSAGE.getMessage()
+            );
+        }
     }
 
     private GoogleCredentials getDefaultServiceAccount() throws IOException {
