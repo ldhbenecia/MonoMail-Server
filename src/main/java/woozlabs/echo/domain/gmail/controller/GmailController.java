@@ -212,7 +212,6 @@ public class GmailController {
                                          @RequestParam(value = "messageId", required = false) String messageId){
         log.info("Request to send message");
         try{
-            List<File> attachments = new ArrayList<>();
             String accessToken = gmailUtility.getActiveAccountAccessToken(httpServletRequest, aAUid);
             List<byte[]> attachmentsData = new ArrayList<>();
             List<String> fileNames = new ArrayList<>();
@@ -240,6 +239,44 @@ public class GmailController {
         }
     }
 
+    @PostMapping("/api/v1/gmail/messages/send/cancel")
+    public ResponseEntity<?> cancelSendMessage(HttpServletRequest httpServletRequest,
+                                                    @RequestParam("messageId") String messageId,
+                                                    @RequestParam("aAUid") String aAUid) {
+        log.info("Request to cancel send message");
+        String accessToken = gmailUtility.getActiveAccountAccessToken(httpServletRequest, aAUid);
+        gmailService.cancelSendMessage(accessToken, messageId);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @PostMapping("/api/v1/gmail/messages/send3")
+    public ResponseEntity<?> sendLazyUserEmailMessage(HttpServletRequest httpServletRequest,
+                                         @RequestParam("mailto") String toEmailAddresses,
+                                         @RequestParam(value = "cc", required = false) String ccEmailAddresses,
+                                         @RequestParam(value = "bcc", required = false) String bccEmailAddresses,
+                                         @RequestParam("subject") String subject,
+                                         @RequestParam("body") String bodyText,
+                                         @RequestParam(value = "files", required = false) List<MultipartFile> files,
+                                         @RequestParam("aAUid") String aAUid,
+                                         @RequestParam(value = "type", required = false) String type,
+                                         @RequestParam(value = "messageId", required = false) String messageId) {
+        log.info("Request to send message");
+        // request dto setting
+        GmailMessageLazySendRequest request = GmailMessageLazySendRequest.builder()
+                .toEmailAddresses(toEmailAddresses)
+                .ccEmailAddresses(ccEmailAddresses)
+                .bccEmailAddresses(bccEmailAddresses)
+                .subject(subject)
+                .body(bodyText)
+                .files(files)
+                .aAUid(aAUid)
+                .type(type)
+                .messageId(messageId)
+                .build();
+        // request send message to cloud task
+        gmailService.sendMessageWithCloudTask(httpServletRequest, request);
+        return new ResponseEntity<>(messageId, HttpStatus.CREATED);
+    }
 
     @GetMapping("/api/v1/gmail/drafts")
     public ResponseEntity<?> getDrafts(HttpServletRequest httpServletRequest,

@@ -39,6 +39,9 @@ dependencies {
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    // common
+    implementation 'org.apache.httpcomponents:httpclient:4.5.13'
+    implementation 'org.apache.httpcomponents:httpmime:4.5.13'
 
     // google, firebase api.. external api
     implementation 'com.google.api-client:google-api-client:2.0.0'
@@ -52,6 +55,7 @@ dependencies {
     implementation 'org.jsoup:jsoup:1.15.3'
     implementation 'com.amazonaws:aws-java-sdk-ses:1.12.429'
     implementation 'com.google.apis:google-api-services-people:v1-rev20220531-2.0.0'
+    implementation 'com.google.cloud:google-cloud-tasks:2.11.0'
 
     // test dl
     implementation 'com.squareup.okhttp3:okhttp:4.9.3'
