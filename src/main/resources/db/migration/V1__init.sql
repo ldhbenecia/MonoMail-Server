@@ -38,6 +38,7 @@ CREATE TABLE IF NOT EXISTS `signature` (
     `created_at` DATETIME(6),
     `updated_at` DATETIME(6),
     `account_id` BIGINT,
+    `title` VARCHAR(255),
     `content` TINYTEXT,
     PRIMARY KEY (`id`),
     INDEX `idx_account_id` (`account_id`);
