@@ -8,5 +8,12 @@ import lombok.Getter;
 @AllArgsConstructor
 public class SignatureResponseDto {
 
-    Map<String, Map<Long, String>> signatures;
+    Map<String, Map<Long, SignatureInfo>> signatures;
+
+    @Getter
+    @AllArgsConstructor
+    public static class SignatureInfo {
+        private String title;
+        private String content;
+    }
 }

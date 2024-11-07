@@ -50,8 +50,8 @@ public class SignatureController {
 
     @PatchMapping("/signature/{signatureId}")
     public ResponseEntity<Void> updateSignature(HttpServletRequest httpServletRequest,
-                                                @PathVariable("signatureId") Long signatureId,
-                                                @RequestBody SignatureRequestDto signatureRequestDto) {
+                                                @PathVariable("signatureId") final Long signatureId,
+                                                @RequestBody final SignatureRequestDto signatureRequestDto) {
         final String uid = (String) httpServletRequest.getAttribute("uid");
         signatureService.updateSignature(uid, signatureId, signatureRequestDto);
         return ResponseEntity.ok().build();

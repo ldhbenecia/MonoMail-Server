@@ -5,5 +5,6 @@ import lombok.Getter;
 @Getter
 public class SignatureRequestDto {
 
-    String content;
+    private String title;
+    private String content;
 }

@@ -14,6 +14,7 @@ import woozlabs.echo.domain.member.repository.AccountRepository;
 import woozlabs.echo.domain.member.repository.MemberRepository;
 import woozlabs.echo.domain.signature.dto.SignatureRequestDto;
 import woozlabs.echo.domain.signature.dto.SignatureResponseDto;
+import woozlabs.echo.domain.signature.dto.SignatureResponseDto.SignatureInfo;
 import woozlabs.echo.domain.signature.entity.Signature;
 import woozlabs.echo.domain.signature.repository.SignatureRepository;
 import woozlabs.echo.global.exception.CustomErrorException;
@@ -29,15 +30,18 @@ public class SignatureService {
     private final MemberRepository memberRepository;
 
     public SignatureResponseDto getSignatures(final String uid, final boolean isDirectAccountRequest) {
-        final Map<String, Map<Long, String>> signaturesMap = new HashMap<>();
+        final Map<String, Map<Long, SignatureInfo>> signaturesMap = new HashMap<>();
 
         if (isDirectAccountRequest) {
             // aAUid가 들어온 경우 - 특정 Account의 시그니처만 반환
             final Account account = accountRepository.findByUid(uid)
                     .orElseThrow(() -> new CustomErrorException(ErrorCode.NOT_FOUND_ACCOUNT_ERROR_MESSAGE));
 
-            final Map<Long, String> signatures = account.getSignatures().stream()
-                    .collect(Collectors.toMap(Signature::getId, Signature::getContent));
+            final Map<Long, SignatureInfo> signatures = account.getSignatures().stream()
+                    .collect(Collectors.toMap(
+                            Signature::getId,
+                            signature -> new SignatureInfo(signature.getTitle(), signature.getContent())
+                    ));
 
             signaturesMap.put(account.getUid(), signatures);
         } else {
@@ -50,8 +54,11 @@ public class SignatureService {
                     .collect(Collectors.toList());
 
             for (final Account memberAccount : memberAccounts) {
-                final Map<Long, String> signatures = memberAccount.getSignatures().stream()
-                        .collect(Collectors.toMap(Signature::getId, Signature::getContent));
+                final Map<Long, SignatureInfo> signatures = memberAccount.getSignatures().stream()
+                        .collect(Collectors.toMap(
+                                Signature::getId,
+                                signature -> new SignatureInfo(signature.getTitle(), signature.getContent())
+                        ));
                 signaturesMap.put(memberAccount.getUid(), signatures);
             }
         }
@@ -82,7 +89,8 @@ public class SignatureService {
         final Account account = accountRepository.findByUid(uid)
                 .orElseThrow(() -> new CustomErrorException(ErrorCode.NOT_FOUND_ACCOUNT_ERROR_MESSAGE));
 
-        final Signature signature = Signature.of(signatureRequestDto.getContent(), account);
+        final Signature signature = Signature.of(signatureRequestDto.getTitle(), signatureRequestDto.getContent(),
+                account);
 
         signatureRepository.save(signature);
     }
@@ -102,6 +110,6 @@ public class SignatureService {
             throw new CustomErrorException(ErrorCode.UNAUTHORIZED_ACCESS);
         }
 
-        signature.update(signatureRequestDto.getContent());
+        signature.update(signatureRequestDto);
     }
 }
