@@ -17,8 +17,11 @@ import woozlabs.echo.domain.auth.utils.AuthCookieUtils;
 import woozlabs.echo.domain.auth.utils.AuthUtils;
 import woozlabs.echo.domain.auth.utils.FirebaseUtils;
 import woozlabs.echo.domain.member.entity.Account;
+import woozlabs.echo.domain.member.entity.Density;
 import woozlabs.echo.domain.member.entity.Member;
 import woozlabs.echo.domain.member.entity.MemberAccount;
+import woozlabs.echo.domain.member.entity.MemberPreference;
+import woozlabs.echo.domain.member.entity.Theme;
 import woozlabs.echo.domain.member.entity.Watch;
 import woozlabs.echo.domain.member.repository.AccountRepository;
 import woozlabs.echo.domain.member.repository.MemberAccountRepository;
@@ -224,19 +227,30 @@ public class AuthService {
         String memberName = displayName + "-" + AuthUtils.generateRandomString();
         String email = (String) userInfo.get("email");
 
+        // Member 생성
         Member member = new Member();
         member.setPrimaryUid(account.getUid());
         member.setMemberName(memberName);
         member.setDisplayName(displayName);
         member.setEmail(email);
         member.setProfileImageUrl((String) userInfo.get("picture"));
-        member.setWatchNotifications(Map.of(account.getUid(), Watch.INBOX));
+        member.setDeletedAt(null);
+
+        // MemberPreference 설정
+        MemberPreference memberPreference = new MemberPreference();
+        memberPreference.setMember(member);
+        memberPreference.setLanguage("en");
+        memberPreference.setDensity(Density.COMPACT);
+        memberPreference.setTheme(Theme.LIGHT);
+        memberPreference.setMarketingEmails(false);
+        memberPreference.setSecurityEmails(true);
+        //memberPreference.setAlertSound("mono");
+        memberPreference.setWatchNotification(Map.of(account.getUid(), Watch.INBOX));
+        member.setPreference(memberPreference);
 
         MemberAccount memberAccount = new MemberAccount(member, account);
         member.addMemberAccount(memberAccount);
         account.getMemberAccounts().add(memberAccount);
-
-        member.setDeletedAt(null);
 
         memberRepository.save(member);
         accountRepository.save(account);
