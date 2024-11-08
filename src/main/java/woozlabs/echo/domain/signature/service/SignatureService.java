@@ -112,4 +112,15 @@ public class SignatureService {
 
         signature.update(signatureRequestDto);
     }
+
+    @Transactional
+    public void setDefaultSignature(final String uid, final Long signatureId) {
+        final Account account = accountRepository.findByUid(uid)
+                .orElseThrow(() -> new CustomErrorException(ErrorCode.NOT_FOUND_ACCOUNT_ERROR_MESSAGE));
+
+        final Signature newDefaultSignature = signatureRepository.findById(signatureId)
+                .orElseThrow(() -> new CustomErrorException(ErrorCode.NOT_FOUND_SIGNATURE));
+
+        account.setDefaultSignature(newDefaultSignature);
+    }
 }

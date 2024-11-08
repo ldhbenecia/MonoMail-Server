@@ -1,12 +1,11 @@
-package woozlabs.echo.domain.member.dto.preference;
+package woozlabs.echo.domain.preference.dto;
 
+import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import woozlabs.echo.domain.member.entity.Watch;
-
-import java.util.Map;
 
 @Getter
 @Builder
@@ -14,7 +13,8 @@ import java.util.Map;
 @AllArgsConstructor
 public class NotificationDto {
 
-    private Map<String, Watch> watchNotification; // Map<String, "INBOX" | "IMPORTANT" | "OFF">
+    private Map<String, Watch> watchNotification;
+    private String alertSound;
     private Boolean marketingEmails;
     private Boolean securityEmails;
 }

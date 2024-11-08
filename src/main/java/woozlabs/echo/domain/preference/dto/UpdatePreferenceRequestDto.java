@@ -1,4 +1,4 @@
-package woozlabs.echo.domain.member.dto.preference;
+package woozlabs.echo.domain.preference.dto;
 
 import lombok.Data;
 
