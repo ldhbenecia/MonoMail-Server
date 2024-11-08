@@ -74,7 +74,6 @@ public class AccountService {
                                 .provider(account.getProvider())
                                 .isExpired(account.getAccessToken() == null)
                                 .scopes(grantedScopes)
-                                // .defaultSignatureId(account.getDefaultSignature().getId())
                                 .build();
                     })
                     .collect(Collectors.toList());
@@ -107,7 +106,6 @@ public class AccountService {
                     .provider(currentAccount.getProvider())
                     .isExpired(currentAccount.getAccessToken() == null)
                     .scopes(googleOAuthUtils.getGrantedScopes(currentAccount.getAccessToken()))
-                //     .defaultSignatureId(currentAccount.getDefaultSignature().getId())
                     .build();
 
             List<GetAccountResponseDto.RelatedMemberDto> relatedMembers = memberAccounts.stream()

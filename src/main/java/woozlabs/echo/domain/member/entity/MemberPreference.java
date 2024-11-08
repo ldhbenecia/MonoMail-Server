@@ -67,4 +67,15 @@ public class MemberPreference {
     @MapKeyColumn(name = "security_email")
     @Column(name = "timestamp")
     private Map<Boolean, LocalDateTime> securityEmailTimestamps = new HashMap<>();
+
+
+
+    @ElementCollection
+    @CollectionTable(name = "account_default_signatures", joinColumns = @JoinColumn(name = "member_id"))
+    @MapKeyColumn(name = "account_uid")
+    @Column(name = "signature_id")
+    private Map<String, Long> defaultSignature = new HashMap<>();
+
+    private Integer cancelWindow;
+
 }

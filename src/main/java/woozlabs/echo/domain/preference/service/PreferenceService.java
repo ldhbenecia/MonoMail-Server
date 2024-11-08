@@ -7,6 +7,7 @@ import woozlabs.echo.domain.member.entity.Member;
 import woozlabs.echo.domain.member.entity.MemberPreference;
 import woozlabs.echo.domain.member.repository.MemberRepository;
 import woozlabs.echo.domain.preference.dto.AppearanceDto;
+import woozlabs.echo.domain.preference.dto.EmailDto;
 import woozlabs.echo.domain.preference.dto.NotificationDto;
 import woozlabs.echo.domain.preference.dto.PreferenceDto;
 import woozlabs.echo.domain.preference.dto.UpdatePreferenceRequestDto;
@@ -61,6 +62,18 @@ public class PreferenceService {
                     memberPreference.setSecurityEmails(notificationDto.getSecurityEmails());
                 }
             }
+
+
+            // Update email preferences
+            EmailDto emailDto = preferenceDto.getEmail(); // Get the email preference part
+            if (emailDto != null) {
+                if (emailDto.getCancelWindow() >= 0) { // Ensure valid cancel window
+                    memberPreference.setCancelWindow(emailDto.getCancelWindow());
+                }
+                if (emailDto.getDefaultSignature() != null) {
+                    memberPreference.setDefaultSignature(emailDto.getDefaultSignature());
+                }
+            }
         }
     }
 
@@ -79,6 +92,10 @@ public class PreferenceService {
                 .notification(NotificationDto.builder()
                         .watchNotification(memberPreference.getWatchNotification())
                         .alertSound(memberPreference.getAlertSound())
+                        .build())
+                .email(EmailDto.builder() // Add the email preferences
+                        .defaultSignature(memberPreference.getDefaultSignature())
+                        .cancelWindow(memberPreference.getCancelWindow())
                         .build())
                 .build();
     }

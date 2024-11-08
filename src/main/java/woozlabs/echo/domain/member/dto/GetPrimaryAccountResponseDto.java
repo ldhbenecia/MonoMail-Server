@@ -50,7 +50,6 @@ public class GetPrimaryAccountResponseDto {
         private String provider;
         private Boolean isExpired;
         private List<String> scopes;
-        private Long defaultSignatureId;
     }
 
     @Getter
