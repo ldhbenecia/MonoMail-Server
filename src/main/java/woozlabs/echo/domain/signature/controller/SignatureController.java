@@ -56,4 +56,11 @@ public class SignatureController {
         signatureService.updateSignature(uid, signatureId, signatureRequestDto);
         return ResponseEntity.ok().build();
     }
+
+    @PostMapping("/signature/default")
+    public ResponseEntity<Void> setDefaultSignature(@RequestParam("aAUid") final String activeAccountUid,
+                                                    @RequestParam("signatureId") final Long signatureId) {
+        signatureService.setDefaultSignature(activeAccountUid, signatureId);
+        return ResponseEntity.ok().build();
+    }
 }
