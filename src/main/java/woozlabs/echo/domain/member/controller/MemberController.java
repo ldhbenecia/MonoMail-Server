@@ -2,20 +2,21 @@ package woozlabs.echo.domain.member.controller;
 
 import com.google.firebase.auth.FirebaseAuthException;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 import woozlabs.echo.domain.member.dto.ChangePrimaryAccountRequestDto;
 import woozlabs.echo.domain.member.dto.ChangePrimaryAccountResponseDto;
 import woozlabs.echo.domain.member.dto.CheckPrimaryAccountEligibilityRequestDto;
 import woozlabs.echo.domain.member.dto.GetPrimaryAccountResponseDto;
-import woozlabs.echo.domain.member.dto.preference.PreferenceDto;
-import woozlabs.echo.domain.member.dto.preference.UpdatePreferenceRequestDto;
 import woozlabs.echo.domain.member.dto.profile.ChangeProfileRequestDto;
 import woozlabs.echo.domain.member.service.MemberService;
 import woozlabs.echo.global.constant.GlobalConstant;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/echo/user")
@@ -23,21 +24,6 @@ import java.util.Map;
 public class MemberController {
 
     private final MemberService memberService;
-
-    @GetMapping("/preferences")
-    public ResponseEntity<PreferenceDto> getPreferences(HttpServletRequest httpServletRequest) {
-        String uid = (String) httpServletRequest.getAttribute(GlobalConstant.FIREBASE_UID_KEY);
-        PreferenceDto preference = memberService.getPreference(uid);
-        return ResponseEntity.ok(preference);
-    }
-
-    @PatchMapping("/preferences")
-    public ResponseEntity<Void> updatePreferences(HttpServletRequest httpServletRequest,
-                                                  @RequestBody UpdatePreferenceRequestDto updatePreferenceRequest) {
-        String uid = (String) httpServletRequest.getAttribute(GlobalConstant.FIREBASE_UID_KEY);
-        memberService.updatePreference(uid, updatePreferenceRequest);
-        return ResponseEntity.ok().build();
-    }
 
     @PostMapping("/delete")
     public ResponseEntity<Void> softDeleteMember(HttpServletRequest httpServletRequest) {
@@ -51,13 +37,6 @@ public class MemberController {
         String uid = (String) httpServletRequest.getAttribute(GlobalConstant.FIREBASE_UID_KEY);
         memberService.superHardDeleteMember(uid);
         return ResponseEntity.ok().build();
-    }
-
-    @GetMapping("/account-info")
-    public ResponseEntity<Object> getAccountInfo(HttpServletRequest httpServletRequest) {
-        String uid = (String) httpServletRequest.getAttribute(GlobalConstant.FIREBASE_UID_KEY);
-        Object response = memberService.getAccountInfo(uid);
-        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/create")
@@ -76,10 +55,13 @@ public class MemberController {
     }
 
     @PostMapping("/change-primary-account")
-    public ResponseEntity<ChangePrimaryAccountResponseDto> changePrimaryAccount(HttpServletRequest httpServletRequest,
-                                                                                @RequestBody ChangePrimaryAccountRequestDto changePrimaryAccountRequestDto) throws FirebaseAuthException {
+    public ResponseEntity<ChangePrimaryAccountResponseDto> changePrimaryAccount(
+            HttpServletRequest httpServletRequest,
+            @RequestBody ChangePrimaryAccountRequestDto changePrimaryAccountRequestDto)
+            throws FirebaseAuthException {
         String uid = (String) httpServletRequest.getAttribute(GlobalConstant.FIREBASE_UID_KEY);
-        ChangePrimaryAccountResponseDto responseDto = memberService.changePrimaryAccount(uid, changePrimaryAccountRequestDto.getUid());
+        ChangePrimaryAccountResponseDto responseDto = memberService.changePrimaryAccount(uid,
+                changePrimaryAccountRequestDto.getUid());
         return ResponseEntity.ok(responseDto);
     }
 
