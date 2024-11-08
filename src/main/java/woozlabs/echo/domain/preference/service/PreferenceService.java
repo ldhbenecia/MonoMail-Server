@@ -54,6 +54,12 @@ public class PreferenceService {
                 if (notificationDto.getAlertSound() != null) {
                     memberPreference.setAlertSound(notificationDto.getAlertSound());
                 }
+                if (notificationDto.getMarketingEmails() != null) {
+                    memberPreference.setMarketingEmails(notificationDto.getMarketingEmails());
+                }
+                if (notificationDto.getSecurityEmails() != null) {
+                    memberPreference.setSecurityEmails(notificationDto.getSecurityEmails());
+                }
             }
         }
     }
