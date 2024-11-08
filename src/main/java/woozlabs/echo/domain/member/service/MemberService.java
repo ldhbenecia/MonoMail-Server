@@ -22,6 +22,7 @@ import woozlabs.echo.domain.member.dto.profile.ChangeProfileRequestDto;
 import woozlabs.echo.domain.member.entity.Account;
 import woozlabs.echo.domain.member.entity.Member;
 import woozlabs.echo.domain.member.entity.MemberAccount;
+import woozlabs.echo.domain.member.entity.MemberPreference;
 import woozlabs.echo.domain.member.repository.AccountRepository;
 import woozlabs.echo.domain.member.repository.MemberAccountRepository;
 import woozlabs.echo.domain.member.repository.MemberRepository;
@@ -157,6 +158,8 @@ public class MemberService {
         Member member = memberRepository.findByPrimaryUid(primaryUid)
                 .orElseThrow(() -> new CustomErrorException(ErrorCode.NOT_FOUND_MEMBER));
 
+        MemberPreference memberPreference = member.getPreference();
+
         String displayName = changeProfileRequestDto.getDisplayName();
         String profileImageUrl = changeProfileRequestDto.getProfileImageUrl();
         String language = changeProfileRequestDto.getLanguage();
@@ -168,7 +171,7 @@ public class MemberService {
             member.setProfileImageUrl(profileImageUrl);
         }
         if (language != null) {
-            member.setLanguage(language);
+            memberPreference.setLanguage(language);
         }
     }
 
