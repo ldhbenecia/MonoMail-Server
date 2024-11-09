@@ -68,8 +68,6 @@ public class MemberPreference {
     @Column(name = "timestamp")
     private Map<Boolean, LocalDateTime> securityEmailTimestamps = new HashMap<>();
 
-
-
     @ElementCollection
     @CollectionTable(name = "account_default_signatures", joinColumns = @JoinColumn(name = "member_id"))
     @MapKeyColumn(name = "account_uid")
@@ -78,4 +76,7 @@ public class MemberPreference {
 
     private Integer cancelWindow;
 
+    public void setDefaultSignature(final String accountUid, final Long signatureId) {
+        this.defaultSignature.put(accountUid, signatureId);
+    }
 }

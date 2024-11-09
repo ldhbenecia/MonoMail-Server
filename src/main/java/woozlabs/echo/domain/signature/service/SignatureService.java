@@ -10,7 +10,9 @@ import org.springframework.transaction.annotation.Transactional;
 import woozlabs.echo.domain.member.entity.Account;
 import woozlabs.echo.domain.member.entity.Member;
 import woozlabs.echo.domain.member.entity.MemberAccount;
+import woozlabs.echo.domain.member.entity.MemberPreference;
 import woozlabs.echo.domain.member.repository.AccountRepository;
+import woozlabs.echo.domain.member.repository.MemberAccountRepository;
 import woozlabs.echo.domain.member.repository.MemberRepository;
 import woozlabs.echo.domain.signature.dto.SignatureRequestDto;
 import woozlabs.echo.domain.signature.dto.SignatureResponseDto;
@@ -28,6 +30,7 @@ public class SignatureService {
     private final SignatureRepository signatureRepository;
     private final AccountRepository accountRepository;
     private final MemberRepository memberRepository;
+    private final MemberAccountRepository memberAccountRepository;
 
     public SignatureResponseDto getSignatures(final String uid, final boolean isDirectAccountRequest) {
         final Map<String, Map<Long, SignatureInfo>> signaturesMap = new HashMap<>();
@@ -114,13 +117,11 @@ public class SignatureService {
     }
 
     @Transactional
-    public void setDefaultSignature(final String uid, final Long signatureId) {
-        final Account account = accountRepository.findByUid(uid)
-                .orElseThrow(() -> new CustomErrorException(ErrorCode.NOT_FOUND_ACCOUNT_ERROR_MESSAGE));
+    public void setDefaultSignature(final String primaryUid, final String accountUid, final Long signatureId) {
+        final Member member = memberRepository.findByPrimaryUid(primaryUid)
+                .orElseThrow(() -> new CustomErrorException(ErrorCode.NOT_FOUND_MEMBER));
 
-        final Signature newDefaultSignature = signatureRepository.findById(signatureId)
-                .orElseThrow(() -> new CustomErrorException(ErrorCode.NOT_FOUND_SIGNATURE));
-
-        account.setDefaultSignature(newDefaultSignature);
+        final MemberPreference memberPreference = member.getPreference();
+        memberPreference.setDefaultSignature(accountUid, signatureId);
     }
 }
