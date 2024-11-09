@@ -84,12 +84,9 @@ import static woozlabs.echo.global.constant.GlobalConstant.*;
 @EnableAsync
 public class GmailService {
     // constant value
-    @Value("${google.cloud-task.project-id}")
-    private String projectId;
-    @Value("${google.cloud-task.location}")
-    private String locationId;
-    @Value("${google.cloud-task.queue-id}")
-    private String queueId;
+    private final String projectId = "echo-email-app";
+    private String locationId = "us-central1";
+    private String queueId = "echo-email-lazy-send-queue";
     // injection & init
     private final MultiThreadGmailService multiThreadGmailService;
     private final AccountRepository accountRepository;
@@ -899,18 +896,12 @@ public class GmailService {
             GmailThreadListThreads firstThread = detailedThreads.get(0);
             GmailThreadGetMessagesResponse lastMessageInFirstThread = firstThread.getMessages().get(0);
             Long timeStamp = lastMessageInFirstThread.getTimestamp();
-            String timeZone = lastMessageInFirstThread.getTimezone();
-            Instant instant = Instant.ofEpochMilli(timeStamp);
-            try{
-                ZonedDateTime zonedDateTime = instant.atZone(ZoneId.of(timeZone));
-                LocalDate firstThreadDate = zonedDateTime.toLocalDate();
-                // check validation
-                LocalDate beforeSixtyDays = currentDate.minusDays(60);
-                if(firstThreadDate.isBefore(beforeSixtyDays)){
-                    throw new CustomErrorException(ErrorCode.BILLING_ERROR_MESSAGE, ErrorCode.BILLING_ERROR_MESSAGE.getMessage());
-                }
-            }catch (Exception e){
-                log.error("ZoneId Error: " + timeZone);
+            // calc date 60 days ago
+            Instant sixtyDaysAgoInstant = currentDate.minusDays(60).atStartOfDay(ZoneOffset.UTC).toInstant();
+            Instant threadInstant = Instant.ofEpochMilli(timeStamp);
+
+            if (threadInstant.isBefore(sixtyDaysAgoInstant)) {
+                throw new CustomErrorException(ErrorCode.BILLING_ERROR_MESSAGE, ErrorCode.BILLING_ERROR_MESSAGE.getMessage());
             }
         }
     }
@@ -921,18 +912,12 @@ public class GmailService {
             GmailDraftListDrafts firstDraft = detailedDrafts.get(0);
             GmailThreadGetMessagesResponse draftMessage = firstDraft.getMessage(); // 분리 필요
             Long timeStamp = draftMessage.getTimestamp();
-            String timeZone = draftMessage.getTimezone();
-            Instant instant = Instant.ofEpochMilli(timeStamp);
-            try{
-                ZonedDateTime zonedDateTime = instant.atZone(ZoneId.of(timeZone));
-                LocalDate firstThreadDate = zonedDateTime.toLocalDate();
-                // check validation
-                LocalDate beforeSixtyDays = currentDate.minusDays(60);
-                if(firstThreadDate.isBefore(beforeSixtyDays)){
-                    throw new CustomErrorException(ErrorCode.BILLING_ERROR_MESSAGE, ErrorCode.BILLING_ERROR_MESSAGE.getMessage());
-                }
-            }catch (Exception e){
-                log.error("ZoneId Error: " + timeZone);
+            // calc date 60 days ago
+            Instant sixtyDaysAgoInstant = currentDate.minusDays(60).atStartOfDay(ZoneOffset.UTC).toInstant();
+            Instant draftInstant = Instant.ofEpochMilli(timeStamp);
+
+            if (draftInstant.isBefore(sixtyDaysAgoInstant)) {
+                throw new CustomErrorException(ErrorCode.BILLING_ERROR_MESSAGE, ErrorCode.BILLING_ERROR_MESSAGE.getMessage());
             }
         }
     }
