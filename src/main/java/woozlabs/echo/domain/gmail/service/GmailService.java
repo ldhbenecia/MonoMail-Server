@@ -85,8 +85,8 @@ import static woozlabs.echo.global.constant.GlobalConstant.*;
 public class GmailService {
     // constant value
     private final String projectId = "echo-email-app";
-    private String locationId = "us-central1";
-    private String queueId = "echo-email-lazy-send-queue";
+    private final String locationId = "us-central1";
+    private final String queueId = "echo-email-lazy-send-queue";
     // injection & init
     private final MultiThreadGmailService multiThreadGmailService;
     private final AccountRepository accountRepository;
