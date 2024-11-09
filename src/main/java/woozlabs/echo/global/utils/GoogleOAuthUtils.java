@@ -43,7 +43,7 @@ public class GoogleOAuthUtils {
         } else {
             log.error("Failed to fetch Google user info. Status code: {}", userInfoResponse.getStatusCode());
             throw new CustomErrorException(ErrorCode.FAILED_TO_FETCH_GOOGLE_USER_INFO_UTILS,
-                    "Failed to fetch Google user info");
+            "Failed to get Google tokens: " + userInfoResponse.getBody());
         }
     }
 
