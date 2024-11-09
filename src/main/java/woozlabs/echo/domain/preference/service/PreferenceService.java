@@ -63,11 +63,9 @@ public class PreferenceService {
                 }
             }
 
-
-            // Update email preferences
             EmailDto emailDto = preferenceDto.getEmail(); // Get the email preference part
             if (emailDto != null) {
-                if (emailDto.getCancelWindow() >= 0) { // Ensure valid cancel window
+                if (emailDto.getCancelWindow() != null && emailDto.getCancelWindow() >= 0) {
                     memberPreference.setCancelWindow(emailDto.getCancelWindow());
                 }
                 if (emailDto.getDefaultSignature() != null) {
