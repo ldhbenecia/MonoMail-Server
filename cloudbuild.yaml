@@ -33,16 +33,16 @@ steps:
     args:
       - 'build'
       - '-t'
-      - 'us-central1-docker.pkg.dev/mono-dev/cloud-run-source-deploy/mono-be:$COMMIT_SHA'
+      - 'us-central1-docker.pkg.dev/echo-email-app/cloud-run-source-deploy/mono-be:$COMMIT_SHA'
       - '-f'
       - 'Dockerfile'
       - '.'
 
-  # Push the container image to Container Registry
+  # Push the container image to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
     args: [
       'push',
-      'us-central1-docker.pkg.dev/mono-dev/cloud-run-source-deploy/mono-be:$COMMIT_SHA'
+      'us-central1-docker.pkg.dev/echo-email-app/cloud-run-source-deploy/mono-be:$COMMIT_SHA'
     ]
 
   # Deploy container image to Cloud Run
@@ -53,7 +53,7 @@ steps:
       'mono-be',
       '--platform=managed',
       '--image',
-      'us-central1-docker.pkg.dev/mono-dev/cloud-run-source-deploy/mono-be:$COMMIT_SHA',
+      'us-central1-docker.pkg.dev/echo-email-app/cloud-run-source-deploy/mono-be:$COMMIT_SHA',
       '--region',
       'us-central1',
       '--allow-unauthenticated',
@@ -61,8 +61,7 @@ steps:
     ]
 
 images:
-  - 'us-central1-docker.pkg.dev/mono-dev/cloud-run-source-deploy/mono-be:$COMMIT_SHA'
+  - 'us-central1-docker.pkg.dev/echo-email-app/cloud-run-source-deploy/mono-be:$COMMIT_SHA'
 
 options:
   logging: CLOUD_LOGGING_ONLY
-
