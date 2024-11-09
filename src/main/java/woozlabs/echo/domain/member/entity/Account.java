@@ -2,11 +2,14 @@ package woozlabs.echo.domain.member.entity;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -60,4 +63,8 @@ public class Account extends BaseEntity {
 
     @OneToMany(mappedBy = "account", cascade = CascadeType.ALL)
     private List<Signature> signatures = new ArrayList<>();
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "default_signature_id")
+    private Signature defaultSignature;
 }
