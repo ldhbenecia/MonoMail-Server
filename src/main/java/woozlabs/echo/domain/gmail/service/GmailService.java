@@ -28,6 +28,7 @@ import org.apache.http.util.EntityUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -83,17 +84,12 @@ import static woozlabs.echo.global.constant.GlobalConstant.*;
 @EnableAsync
 public class GmailService {
     // constant value
-    private final String projectId = "echo-dev-435808";
-    private final String locationId = "us-central1";
-    private final String queueId = "echo-email-lazy-send-queue";
-    private final List<String> SCOPES = Arrays.asList(
-            "https://www.googleapis.com/auth/gmail.readonly",
-            "https://www.googleapis.com/auth/userinfo.profile",
-            "https://www.googleapis.com/auth/userinfo.email",
-            "https://www.googleapis.com/auth/gmail.modify",
-            "https://www.googleapis.com/auth/cloud-platform",
-            "https://mail.google.com/"
-    );
+    @Value("${google.cloud-task.project-id}")
+    private String projectId;
+    @Value("${google.cloud-task.location}")
+    private String locationId;
+    @Value("${google.cloud-task.queue-id}")
+    private String queueId;
     // injection & init
     private final MultiThreadGmailService multiThreadGmailService;
     private final AccountRepository accountRepository;
@@ -103,7 +99,6 @@ public class GmailService {
     private final GmailUtility gmailUtility;
     private final PubSubValidator pubSubValidator;
     private final AccountService accountService;
-    //private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(8);
 
     public GmailThreadListResponse getQueryUserEmailThreads(String accessToken, String pageToken, Long maxResults, String q, String aAUid) {
         // last login update
@@ -270,29 +265,6 @@ public class GmailService {
     }
 
     @Async
-    public void sendUserEmailMessage(String accessToken, GmailMessageSendRequest request) {
-        try{
-            Gmail gmailService = gmailUtility.createGmailService(accessToken);
-            Profile profile = gmailService.users().getProfile(USER_ID).execute();
-            String fromEmailAddress = profile.getEmailAddress();
-            request.setFromEmailAddress(fromEmailAddress);
-            MimeMessage mimeMessage = createEmail(request);
-            Message message = createMessage(mimeMessage);
-            gmailService.users().messages().send(USER_ID, message).execute();
-        }catch (Exception e) {
-            throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE,
-                    ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE.getMessage()
-            );
-        }finally {
-            for (File file : request.getFiles()) {
-                if (file.exists()) {
-                    file.delete();
-                }
-            }
-        }
-    }
-
-    @Async
     public void sendUserEmailMessageWithAtt(String accessToken, GmailMessageSendRequestWithAtt request){
         try{
             Gmail gmailService = gmailUtility.createGmailService(accessToken);
@@ -304,7 +276,92 @@ public class GmailService {
             uploadEmailData(accessToken, uploadUrl, mimeMessage);
         }catch (Exception e){
             throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE,
-                    ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE.getMessage()
+                    e.getMessage()
+            );
+        }
+    }
+
+    @Async
+    public void sendEmailReply(String accessToken, GmailMessageSendRequestWithAtt request){
+        try{
+            Gmail gmailService = gmailUtility.createGmailService(accessToken);
+            Profile profile = gmailService.users().getProfile(USER_ID).execute();
+            String fromEmailAddress = profile.getEmailAddress();
+            request.setFromEmailAddress(fromEmailAddress);
+            // set message setting for reply
+            Message lastMessage = gmailService.users().messages().get(USER_ID, request.getMessageId()).execute();
+            String threadSubject = lastMessage.getPayload().getHeaders().stream()
+                    .filter(header -> header.getName().equalsIgnoreCase("Subject"))
+                    .findFirst()
+                    .map(MessagePartHeader::getValue)
+                    .orElse("");
+            String originalMessageId = lastMessage.getPayload().getHeaders().stream()
+                    .filter(header -> header.getName().equalsIgnoreCase("Message-ID"))
+                    .findFirst()
+                    .map(MessagePartHeader::getValue)
+                    .orElse("");
+            if(!validateChangedSubject(request.getSubject(), threadSubject)){ // send reply
+                request.setSubject(request.getSubject());
+                MimeMessage mimeMessage = createEmailWithAtt(request);
+                // 답장 관련 헤더 설정
+                if (!originalMessageId.isEmpty()) {
+                    mimeMessage.setHeader("In-Reply-To", originalMessageId);
+                    mimeMessage.setHeader("References", originalMessageId);
+                }
+                Message message = createMessage(mimeMessage);
+                message.setThreadId(lastMessage.getThreadId());
+                gmailService.users().messages().send(USER_ID, message).execute();
+                return;
+            }
+            request.setSubject(request.getSubject());
+            MimeMessage mimeMessage = createEmailWithAtt(request);
+            Message message = createMessage(mimeMessage);
+            gmailService.users().messages().send(USER_ID, message).execute();
+        }catch (Exception e) {
+            throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE,
+                    e.getMessage()
+            );
+        }
+    }
+
+    public void sendEmailForwarding(String accessToken, GmailMessageSendRequestWithAtt request){
+        try{
+            Gmail gmailService = gmailUtility.createGmailService(accessToken);
+            Profile profile = gmailService.users().getProfile(USER_ID).execute();
+            String fromEmailAddress = profile.getEmailAddress();
+            request.setFromEmailAddress(fromEmailAddress);
+            // set reply message
+            Message lastMessage = gmailService.users().messages().get(USER_ID, request.getMessageId()).execute();
+            String threadSubject = lastMessage.getPayload().getHeaders().stream()
+                    .filter(header -> header.getName().equalsIgnoreCase("Subject"))
+                    .findFirst()
+                    .map(MessagePartHeader::getValue)
+                    .orElse("");
+            String originalMessageId = lastMessage.getPayload().getHeaders().stream()
+                    .filter(header -> header.getName().equalsIgnoreCase("Message-ID"))
+                    .findFirst()
+                    .map(MessagePartHeader::getValue)
+                    .orElse("");
+            if(!validateChangedSubject(request.getSubject(), threadSubject)){ // send reply
+                request.setSubject(request.getSubject());
+                MimeMessage mimeMessage = createEmailWithAtt(request);
+                // 답장 관련 헤더 설정
+                if (!originalMessageId.isEmpty()) {
+                    mimeMessage.setHeader("In-Reply-To", originalMessageId);
+                    mimeMessage.setHeader("References", originalMessageId);
+                }
+                Message message = createMessage(mimeMessage);
+                message.setThreadId(lastMessage.getThreadId());
+                gmailService.users().messages().send(USER_ID, message).execute();
+                return;
+            }
+            request.setSubject(request.getSubject());
+            MimeMessage mimeMessage = createEmailWithAtt(request);
+            Message message = createMessage(mimeMessage);
+            gmailService.users().messages().send(USER_ID, message).execute();
+        }catch (Exception e) {
+            throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE,
+                    e.getMessage()
             );
         }
     }
@@ -665,135 +722,6 @@ public class GmailService {
         }
     }
 
-    public void getGoogleDriveFileId(String accessToken, String messageId){
-        try{
-            Gmail gmailService = gmailUtility.createGmailService(accessToken);
-            Message message = gmailService.users().messages().get(USER_ID, messageId).execute();
-            List<String> fileIds = new ArrayList<>();
-            for (MessagePart part : message.getPayload().getParts()) {
-                if ("text/html".equals(part.getMimeType())) {
-                    String standardBase64 = part.getBody().getData()
-                            .replace('-', '+')
-                            .replace('_', '/');
-                    // Add padding if necessary
-                    int paddingCount = (4 - (standardBase64.length() % 4)) % 4;
-                    for (int i = 0; i < paddingCount; i++) {
-                        standardBase64 += "=";
-                    }
-                    byte[] decodedBinaryContent = java.util.Base64.getDecoder().decode(standardBase64);
-                    String decodedData = new String(decodedBinaryContent, "UTF-8");
-                    // Google Drive 파일 URL 패턴을 추출함
-                    Pattern pattern = Pattern.compile("https://docs\\.google\\.com[^\\s]*");
-                    Matcher matcher = pattern.matcher(decodedData);
-                    // 모든 매칭되는 파일 ID를 리스트에 추가
-                    while (matcher.find()) {
-                        fileIds.add(matcher.group());
-                    }
-                }
-            }
-        }catch (IOException e) {
-            System.out.println("An error occurred: " + e);
-        }
-    }
-
-    public void sendEmailReply(GmailMessageSendRequest request, String messageId, String accessToken){
-        try{
-            Gmail gmailService = gmailUtility.createGmailService(accessToken);
-            Profile profile = gmailService.users().getProfile(USER_ID).execute();
-            String fromEmailAddress = profile.getEmailAddress();
-            request.setFromEmailAddress(fromEmailAddress);
-
-            // set reply message
-            Message lastMessage = gmailService.users().messages().get(USER_ID, messageId).execute();
-            String threadSubject = lastMessage.getPayload().getHeaders().stream()
-                    .filter(header -> header.getName().equalsIgnoreCase("Subject"))
-                    .findFirst()
-                    .map(MessagePartHeader::getValue)
-                    .orElse("");
-            String originalMessageId = lastMessage.getPayload().getHeaders().stream()
-                    .filter(header -> header.getName().equalsIgnoreCase("Message-ID"))
-                    .findFirst()
-                    .map(MessagePartHeader::getValue)
-                    .orElse("");
-            if(!validateChangedSubject(request.getSubject(), threadSubject)){ // send reply
-                request.setSubject(request.getSubject());
-                MimeMessage mimeMessage = createEmail(request);
-                // 답장 관련 헤더 설정
-                if (!originalMessageId.isEmpty()) {
-                    mimeMessage.setHeader("In-Reply-To", originalMessageId);
-                    mimeMessage.setHeader("References", originalMessageId);
-                }
-                Message message = createMessage(mimeMessage);
-                message.setThreadId(lastMessage.getThreadId());
-                gmailService.users().messages().send(USER_ID, message).execute();
-                return;
-            }
-            request.setSubject(request.getSubject());
-            MimeMessage mimeMessage = createEmail(request);
-            Message message = createMessage(mimeMessage);
-            gmailService.users().messages().send(USER_ID, message).execute();
-        }catch (Exception e) {
-            throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE,
-                    ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE.getMessage()
-            );
-        }finally {
-            for (File file : request.getFiles()) {
-                if (file.exists()) {
-                    file.delete();
-                }
-            }
-        }
-    }
-
-    public void sendEmailForwarding(GmailMessageSendRequest request, String messageId, String accessToken){
-        try{
-            Gmail gmailService = gmailUtility.createGmailService(accessToken);
-            Profile profile = gmailService.users().getProfile(USER_ID).execute();
-            String fromEmailAddress = profile.getEmailAddress();
-            request.setFromEmailAddress(fromEmailAddress);
-
-            // set reply message
-            Message lastMessage = gmailService.users().messages().get(USER_ID, messageId).execute();
-            String threadSubject = lastMessage.getPayload().getHeaders().stream()
-                    .filter(header -> header.getName().equalsIgnoreCase("Subject"))
-                    .findFirst()
-                    .map(MessagePartHeader::getValue)
-                    .orElse("");
-            String originalMessageId = lastMessage.getPayload().getHeaders().stream()
-                    .filter(header -> header.getName().equalsIgnoreCase("Message-ID"))
-                    .findFirst()
-                    .map(MessagePartHeader::getValue)
-                    .orElse("");
-            if(!validateChangedSubject(request.getSubject(), threadSubject)){ // send reply
-                request.setSubject(request.getSubject());
-                MimeMessage mimeMessage = createEmail(request);
-                // 답장 관련 헤더 설정
-                if (!originalMessageId.isEmpty()) {
-                    mimeMessage.setHeader("In-Reply-To", originalMessageId);
-                    mimeMessage.setHeader("References", originalMessageId);
-                }
-                Message message = createMessage(mimeMessage);
-                message.setThreadId(lastMessage.getThreadId());
-                gmailService.users().messages().send(USER_ID, message).execute();
-                return;
-            }
-            request.setSubject(request.getSubject());
-            MimeMessage mimeMessage = createEmail(request);
-            Message message = createMessage(mimeMessage);
-            gmailService.users().messages().send(USER_ID, message).execute();
-        }catch (Exception e) {
-            throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE,
-                    ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE.getMessage()
-            );
-        }finally {
-            for (File file : request.getFiles()) {
-                if (file.exists()) {
-                    file.delete();
-                }
-            }
-        }
-    }
-
     // cancel message test
     public GmailMessageLazySendResponse sendMessageWithCloudTask(HttpServletRequest httpServletRequest, GmailMessageLazySendRequest request){
         try{
@@ -802,7 +730,7 @@ public class GmailService {
                     .setCredentialsProvider(this::getDefaultServiceAccount)
                     .build());
             QueueName cloudTaskQueue = QueueName.of(projectId, locationId, queueId);
-            String url = String.format("https://9dcd-121-165-252-83.ngrok-free.app/api/v1/gmail/messages/send?aAUid=%s", request.getAAUid());
+            String url = String.format("https://api-dev.monomail.co/api/v1/gmail/messages/send?aAUid=%s", request.getAAUid());
             if(request.getType() != null) url += "&type=" + request.getType();
             if(request.getMessageId() != null) url += "&echoMessageId=" + request.getMessageId();
             // http request obj
@@ -1097,76 +1025,6 @@ public class GmailService {
     }
 
     // Methods : create something
-
-    private MimeMessage createEmail(GmailMessageSendRequest request) throws MessagingException {
-        Properties props = new Properties();
-        Session session = Session.getDefaultInstance(props, null);
-        MimeMessage email = new MimeMessage(session);
-        // setting base
-        email.setFrom(new InternetAddress(request.getFromEmailAddress()));
-        // handling multiple recipients
-        for (String recipient : request.getToEmailAddresses()) {
-            email.addRecipient(jakarta.mail.Message.RecipientType.TO, new InternetAddress(recipient));
-        }
-        // handling multiple CC recipients
-        if (request.getCcEmailAddresses() != null) {
-            for (String ccRecipient : request.getCcEmailAddresses()) {
-                email.addRecipient(jakarta.mail.Message.RecipientType.CC, new InternetAddress(ccRecipient));
-            }
-        }
-        // handling multiple BCC recipients
-        if (request.getBccEmailAddresses() != null) {
-            for (String bccRecipient : request.getBccEmailAddresses()) {
-                email.addRecipient(jakarta.mail.Message.RecipientType.BCC, new InternetAddress(bccRecipient));
-            }
-        }
-        email.setSubject(request.getSubject());
-        // setting body
-        Multipart multipart = new MimeMultipart();
-        MimeBodyPart htmlPart = new MimeBodyPart();
-        String bodyText = request.getBodyText();
-        Document doc = Jsoup.parse(bodyText);
-        Element body = doc.body();
-        List<GmailMessageInlineImage> base64Images = new ArrayList<>();
-        Pattern pattern = Pattern.compile("data:(.*?);base64,([^\"']*)");
-        int cidNum = 0;
-        for(Element element : body.children()){
-            if(element.tagName().equals("img") && element.attr("src").startsWith("data:")){
-                String src = element.attr("src");
-                Matcher matcher = pattern.matcher(src);
-                if (matcher.find()) {
-                    String mimeType = matcher.group(1);
-                    String base64Data = matcher.group(2);
-                    byte[] imageData = java.util.Base64.getDecoder().decode(base64Data);
-                    base64Images.add(new GmailMessageInlineImage(mimeType, imageData));
-                }
-                element.attr("src", "cid:image" + cidNum);
-            }
-        }
-        htmlPart.setContent(body.toString(), "text/html");
-        multipart.addBodyPart(htmlPart);
-
-        for(File file : request.getFiles()){
-            MimeBodyPart fileMimeBodyPart = new MimeBodyPart();
-            DataSource source = new FileDataSource(file);
-            fileMimeBodyPart.setDataHandler(new DataHandler(source));
-            fileMimeBodyPart.setFileName(file.getName());
-            multipart.addBodyPart(fileMimeBodyPart);
-        }
-
-        for(int i = 0;i < base64Images.size();i++){
-            GmailMessageInlineImage inlineFile = base64Images.get(i);
-            MimeBodyPart imagePart = new MimeBodyPart();
-            imagePart.setContent(inlineFile.getData(), inlineFile.getMimeType());
-            imagePart.setFileName("image.png");
-            imagePart.setContentID("<image" + i + ">");
-            imagePart.setDisposition(MimeBodyPart.INLINE);
-            multipart.addBodyPart(imagePart);
-        }
-        email.setContent(multipart);
-        return email;
-    }
-
     private MimeMessage createEmailWithAtt(GmailMessageSendRequestWithAtt request) throws MessagingException {
         Properties props = new Properties();
         Session session = Session.getDefaultInstance(props, null);

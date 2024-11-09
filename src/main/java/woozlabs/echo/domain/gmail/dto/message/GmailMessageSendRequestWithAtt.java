@@ -18,4 +18,5 @@ public class GmailMessageSendRequestWithAtt {
     private List<byte[]> files;
     private List<String> fileNames;
     private String sendType;
+    private String messageId;
 }

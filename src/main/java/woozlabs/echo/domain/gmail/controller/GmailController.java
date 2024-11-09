@@ -163,43 +163,6 @@ public class GmailController {
     }
 
     @PostMapping("/api/v1/gmail/messages/send")
-    public ResponseEntity<?> sendMessage(HttpServletRequest httpServletRequest,
-                                                   @RequestParam("mailto") String toEmailAddresses,
-                                                   @RequestParam(value = "cc", required = false) String ccEmailAddresses,
-                                                   @RequestParam(value = "bcc", required = false) String bccEmailAddresses,
-                                                   @RequestParam("subject") String subject,
-                                                   @RequestParam("body") String bodyText,
-                                                   @RequestParam(value = "files", required = false) List<MultipartFile> files,
-                                                   @RequestParam("aAUid") String aAUid,
-                                                   @RequestParam(value = "type", required = false) String type,
-                                                   @RequestParam(value = "messageId", required = false) String messageId){
-        log.info("Request to send message");
-        try{
-            List<File> attachments = new ArrayList<>();
-            String accessToken = gmailUtility.getActiveAccountAccessToken(httpServletRequest, aAUid);
-            GmailMessageSendRequest request = gmailUtility.createMessageSendRequest(toEmailAddresses, ccEmailAddresses, bccEmailAddresses, subject, bodyText, type);
-            if(files == null) files = new ArrayList<>();
-            for(MultipartFile multipartFile : files){
-                // check exceed maximum
-                if(multipartFile.getSize() > 25 * 1000 * 1000) throw new CustomErrorException(ErrorCode.EXCEED_ATTACHMENT_FILE_SIZE);
-                File tmpFile = gmailUtility.convertMultipartFileToTempFile(multipartFile);
-                attachments.add(tmpFile);
-            }
-            request.setFiles(attachments);
-            if(request.getSendType().equals(SendType.NORMAL.getValue())){ // message type == normal
-                gmailService.sendUserEmailMessage(accessToken, request);
-            }else if(request.getSendType().equals(SendType.REPLY.getValue())){ // message type == reply
-                gmailService.sendEmailReply(request, messageId, accessToken);
-            }else if(request.getSendType().equals(SendType.FORWARD.getValue())){ // message type == forward
-                gmailService.sendEmailForwarding(request, messageId, accessToken);
-            }
-            return new ResponseEntity<>(HttpStatus.CREATED);
-        }catch (Exception e){
-            throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE, ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE.getMessage());
-        }
-    }
-
-    @PostMapping("/api/v1/gmail/messages/send/resume")
     public ResponseEntity<?> sendMessageWithAttachment(HttpServletRequest httpServletRequest,
                                          @RequestParam("mailto") String toEmailAddresses,
                                          @RequestParam(value = "cc", required = false) String ccEmailAddresses,
@@ -216,12 +179,14 @@ public class GmailController {
             List<byte[]> attachmentsData = new ArrayList<>();
             List<String> fileNames = new ArrayList<>();
             if(files == null) files = new ArrayList<>();
+            // validation file size
             for(MultipartFile multipartFile : files){
                 // check exceed maximum
                 if(multipartFile.getSize() > 25 * 1000 * 1000) throw new CustomErrorException(ErrorCode.EXCEED_ATTACHMENT_FILE_SIZE);
                 attachmentsData.add(multipartFile.getBytes()); // add attachment data
                 fileNames.add(multipartFile.getOriginalFilename()); // add attachment file name
             }
+            // request dto setting
             GmailMessageSendRequestWithAtt request = GmailMessageSendRequestWithAtt.builder()
                     .toEmailAddresses(Arrays.asList(toEmailAddresses.split(",")))
                     .ccEmailAddresses(ccEmailAddresses != null ? Arrays.asList(ccEmailAddresses.split(",")) : new ArrayList<>())
@@ -229,13 +194,23 @@ public class GmailController {
                     .subject(subject)
                     .bodyText(bodyText)
                     .sendType(type)
+                    .messageId(messageId)
                     .build();
             request.setFiles(attachmentsData);
             request.setFileNames(fileNames);
-            gmailService.sendUserEmailMessageWithAtt(accessToken, request);
+            // main logic
+            if(type.equals(SendType.NORMAL.getValue())){
+                gmailService.sendUserEmailMessageWithAtt(accessToken, request);
+            }else if(type.equals(SendType.REPLY.getValue())){
+                gmailService.sendEmailReply(accessToken, request);
+            }else if(type.equals(SendType.FORWARD.getValue())){
+                gmailService.sendEmailForwarding(accessToken, request);
+            }else{
+                throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE, "Invalid send type");
+            }
             return new ResponseEntity<>(HttpStatus.CREATED);
         }catch (Exception e){
-            throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE, ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE.getMessage());
+            throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE, e.getMessage());
         }
     }
 
@@ -260,7 +235,7 @@ public class GmailController {
                                          @RequestParam("aAUid") String aAUid,
                                          @RequestParam(value = "type", required = false) String type,
                                          @RequestParam(value = "messageId", required = false) String messageId) {
-        log.info("Request to send message");
+        log.info("Request to lazy-send message");
         // request dto setting
         GmailMessageLazySendRequest request = GmailMessageLazySendRequest.builder()
                 .toEmailAddresses(toEmailAddresses)
