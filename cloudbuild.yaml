@@ -50,7 +50,7 @@ steps:
     args: [
       'run',
       'deploy',
-      'mono-be',
+      'mono-dev',
       '--platform=managed',
       '--image',
       'us-central1-docker.pkg.dev/echo-email-app/cloud-run-source-deploy/mono-be:$COMMIT_SHA',
