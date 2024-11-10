@@ -482,6 +482,7 @@ public class GmailService {
             request.setFromEmailAddress(fromEmailAddress);
             MimeMessage mimeMessage = createDraft(request);
             Message message = createMessage(mimeMessage);
+            message.setThreadId(request.getThreadId());
             // create new draft
             Draft draft = new Draft().setMessage(message);
             Draft newDraft = gmailService.users().drafts().create(USER_ID, draft).execute();

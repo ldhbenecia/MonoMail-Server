@@ -336,7 +336,8 @@ public class GmailController {
                                                    @RequestParam("subject") String subject,
                                                    @RequestParam("body") String bodyText,
                                                    @RequestParam(value = "files", required = false) List<MultipartFile> files,
-                                                   @RequestParam("aAUid") String aAUid){
+                                                   @RequestParam("aAUid") String aAUid,
+                                                   @RequestParam(value = "threadId", required = false) String threadId){
         log.info("Request to create draft");
         try{
             List<File> attachments = new ArrayList<>();
@@ -362,6 +363,7 @@ public class GmailController {
                 attachments.add(tmpFile);
             }
             request.setFiles(attachments);
+            request.setThreadId(threadId);
             GmailDraftCreateResponse response = gmailService.createUserEmailDraft(accessToken, request);
             return new ResponseEntity<>(response, HttpStatus.CREATED);
         }catch (Exception e){
