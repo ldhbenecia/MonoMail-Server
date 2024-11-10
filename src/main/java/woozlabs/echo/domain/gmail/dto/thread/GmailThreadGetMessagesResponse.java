@@ -37,7 +37,6 @@ public class GmailThreadGetMessagesResponse {
     private GmailThreadGetPayload payload;
     private Map<String, GmailThreadListAttachments> attachments;
     private Map<String, GmailThreadListInlineImages> inlineImages;
-    private ExtractVerificationInfo verification = new ExtractVerificationInfo();
 
     public static GmailThreadGetMessagesResponse toGmailThreadGetMessages(Message message) {
         GmailThreadGetMessagesResponse gmailThreadGetMessages = new GmailThreadGetMessagesResponse();

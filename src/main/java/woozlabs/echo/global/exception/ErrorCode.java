@@ -70,6 +70,7 @@ public enum ErrorCode {
     REQUEST_GMAIL_USER_SETTINGS_FILTERS_CREATE_API_ERROR_MESSAGE(500, "Failed to create gmail filters api"),
     REQUEST_GMAIL_USER_LABELS_CREATE_API_ERROR_MESSAGE(500, "Failed to create gmail labels api"),
     REQUEST_GMAIL_USER_WATCH_API_ERROR_MESSAGE(500, "Failed to watch gmail api"),
+    REQUEST_GMAIL_USER_MESSAGES_DELETE_API_ERROR_MESSAGE(500, "Failed to delete gmail messages api"),
     FAILED_TO_GET_GMAIL_CONNECTION_REQUEST(500, "Failed to get connection gmail api"),
     FAILED_TO_CHANGE_DATE_FORMAT(500, "Failed to change date format"),
     INVALID_ACCESS_TOKEN(401, "Invalid Access Token"),

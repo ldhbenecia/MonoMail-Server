@@ -801,6 +801,17 @@ public class GmailService {
         }
     }
 
+    public void deleteMessage(String accessToken, String id){
+        try{
+            Gmail gmailService = gmailUtility.createGmailService(accessToken);
+            gmailService.users().messages().delete(USER_ID, id).execute();
+        }catch (IOException e) {
+            throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_MESSAGES_DELETE_API_ERROR_MESSAGE,
+                    e.getMessage()
+            );
+        }
+    }
+
     private GoogleCredentials getDefaultServiceAccount() throws IOException {
         return GoogleCredentials.getApplicationDefault()
                 .createScoped("https://www.googleapis.com/auth/cloud-platform");

@@ -121,6 +121,16 @@ public class GmailController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @DeleteMapping("/api/v1/gmail/messages/{messageId}")
+    public ResponseEntity<?> deleteMessage(HttpServletRequest httpServletRequest,
+                                           @PathVariable("messageId") String messageId,
+                                           @RequestParam("aAUid") String aAUid){
+        log.info("Request to delete message");
+        String accessToken = gmailUtility.getActiveAccountAccessToken(httpServletRequest, aAUid);
+        gmailService.deleteMessage(accessToken, messageId);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+
     @PatchMapping("/api/v1/gmail/messages/{messageId}/modify")
     public ResponseEntity<?> updateMessage(HttpServletRequest httpServletRequest,
                                            @PathVariable("messageId") String messageId,
