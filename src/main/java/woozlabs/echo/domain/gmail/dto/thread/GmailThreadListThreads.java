@@ -13,14 +13,6 @@ public class GmailThreadListThreads {
     private String snippet;
     private Long timestamp;
     private BigInteger historyId;
-    private List<String> labelIds;
     private int threadSize;
-    private List<GmailThreadGetMessagesFrom> from;
-    private List<GmailThreadGetMessagesCc> cc;
-    private List<GmailThreadGetMessagesBcc> bcc;
-    private int attachmentSize;
-    private Map<String, GmailThreadListAttachments> attachments;
-    private int googleDriveAttachmentSize;
-    private List<String> googleDriveAttachments;
     private List<GmailThreadGetMessagesResponse> messages;
 }

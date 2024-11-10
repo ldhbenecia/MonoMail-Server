@@ -28,6 +28,7 @@ import org.apache.http.util.EntityUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpEntity;
@@ -321,6 +322,7 @@ public class GmailService {
         }
     }
 
+    @Async
     public void sendEmailForwarding(String accessToken, GmailMessageSendRequestWithAtt request){
         try{
             Gmail gmailService = gmailUtility.createGmailService(accessToken);
@@ -361,6 +363,12 @@ public class GmailService {
                     e.getMessage()
             );
         }
+    }
+
+    public void sendScheduleEmail(GmailMessageSendRequestWithAtt request, LocalDateTime scheduleTime){
+        // scheduling validation
+        // create job
+
     }
 
     public GmailThreadTotalCountResponse getUserEmailThreadsTotalCount(String accessToken, String label){
