@@ -13,6 +13,5 @@ public class GmailThreadListThreads {
     private String snippet;
     private Long timestamp;
     private BigInteger historyId;
-    private int threadSize;
     private List<GmailThreadGetMessagesResponse> messages;
 }

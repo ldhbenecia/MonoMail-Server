@@ -67,7 +67,6 @@ public class MultiThreadGmailService {
             }
             gmailThreadListThreads.setId(id);
             gmailThreadListThreads.setHistoryId(historyId);
-            gmailThreadListThreads.setThreadSize(messages.size());
             gmailThreadListThreads.setMessages(convertedMessages);
             return gmailThreadListThreads;
         } catch (IOException e) {
