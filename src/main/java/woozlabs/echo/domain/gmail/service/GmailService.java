@@ -426,11 +426,12 @@ public class GmailService {
             List<Draft> drafts = draftsResponse.getDrafts();
             drafts = isEmptyResult(drafts);
             List<GmailDraftListDrafts> detailedDrafts = getDetailedDrafts(drafts, gmailService); // get detailed threads
+            List<GmailThreadGetMessagesResponse> detailedDraftsMessages = detailedDrafts.stream().map(GmailDraftListDrafts::getMessage).toList();
             if(pageToken != null){
                 validatePaymentDraft(detailedDrafts, currentDate);
             }
             return GmailDraftListResponse.builder()
-                    .drafts(detailedDrafts)
+                    .drafts(detailedDraftsMessages)
                     .nextPageToken(draftsResponse.getNextPageToken())
                     .build();
         }catch (IOException e) {
