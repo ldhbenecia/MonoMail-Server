@@ -40,11 +40,7 @@ public class MultiThreadGmailService {
                     .setFormat(THREADS_GET_FULL_FORMAT)
                     .execute();
             List<Message> messages = detailedThread.getMessages();
-            List<GmailThreadGetMessagesFrom> froms = new ArrayList<>();
-            List<GmailThreadGetMessagesCc> ccs = new ArrayList<>();
-            List<GmailThreadGetMessagesBcc> bccs = new ArrayList<>();
             Map<String, GmailThreadListAttachments> attachments = new HashMap<>();
-            //List<String> googleDriveAttachments = new ArrayList<>();
             List<GmailThreadGetMessagesResponse> convertedMessages = new ArrayList<>();
             List<String> labelIds = new ArrayList<>();
             for(int idx = 0;idx < messages.size();idx++){
@@ -68,27 +64,12 @@ public class MultiThreadGmailService {
                         gmailThreadListThreads.setSubject(header.getValue());
                     }
                 });
-                GmailThreadGetMessagesResponse gmailThreadGetMessage = convertedMessages.get(convertedMessages.size()-1);
-                froms.add(gmailThreadGetMessage.getFrom());
-                ccs.addAll(gmailThreadGetMessage.getCc());
-                bccs.addAll(gmailThreadGetMessage.getBcc());
-                //googleDriveAttachments.addAll(getGoogleDriveAttachments(message));
             }
-            gmailThreadListThreads.setLabelIds(labelIds.stream().distinct().collect(Collectors.toList()));
             gmailThreadListThreads.setId(id);
             gmailThreadListThreads.setHistoryId(historyId);
-            gmailThreadListThreads.setFrom(froms.stream().distinct().toList());
-            gmailThreadListThreads.setCc(ccs.stream().distinct().toList());
-            gmailThreadListThreads.setBcc(bccs.stream().distinct().toList());
-            gmailThreadListThreads.setThreadSize(messages.size());
-            gmailThreadListThreads.setAttachments(attachments);
-            gmailThreadListThreads.setAttachmentSize(attachments.size());
             gmailThreadListThreads.setMessages(convertedMessages);
-            //gmailThreadListThreads.setGoogleDriveAttachmentSize(googleDriveAttachments.size());
-            //gmailThreadListThreads.setGoogleDriveAttachments(googleDriveAttachments.stream().distinct().toList());
             return gmailThreadListThreads;
         } catch (IOException e) {
-            e.printStackTrace();
             throw new GmailException(e.getMessage());
         }
     }

@@ -15,4 +15,5 @@ public class GmailDraftCommonRequest {
     private String subject;
     private String bodyText;
     private List<File> files;
+    private String threadId;
 }

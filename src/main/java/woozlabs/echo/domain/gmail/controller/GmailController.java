@@ -121,6 +121,20 @@ public class GmailController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @DeleteMapping("/api/v1/gmail/messages/{messageId}")
+    public ResponseEntity<?> deleteMessage(HttpServletRequest httpServletRequest,
+                                           @PathVariable("messageId") String messageId,
+                                           @RequestParam("aAUid") String aAUid){
+        log.info("Request to delete message");
+        String accessToken = gmailUtility.getActiveAccountAccessToken(httpServletRequest, aAUid);
+        gmailService.deleteMessage(accessToken, messageId);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+
+//    @PutMapping("/api/v1/gmail/messages/{messageId}/draft/update")
+//    public ResponseEntity<?> updateDraft(HttpServletRequest httpServletRequest,
+
+
     @PatchMapping("/api/v1/gmail/messages/{messageId}/modify")
     public ResponseEntity<?> updateMessage(HttpServletRequest httpServletRequest,
                                            @PathVariable("messageId") String messageId,
@@ -179,6 +193,7 @@ public class GmailController {
             List<byte[]> attachmentsData = new ArrayList<>();
             List<String> fileNames = new ArrayList<>();
             if(files == null) files = new ArrayList<>();
+            if(type == null) type = SendType.NORMAL.getValue();
             // validation file size
             for(MultipartFile multipartFile : files){
                 // check exceed maximum
@@ -253,6 +268,59 @@ public class GmailController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
+    @PostMapping("/api/v1/gmail/messages/send/schedule")
+    public ResponseEntity<?> sendScheduleEmail(HttpServletRequest httpServletRequest,
+                                               @RequestParam("mailto") String toEmailAddresses,
+                                               @RequestParam(value = "cc", required = false) String ccEmailAddresses,
+                                               @RequestParam(value = "bcc", required = false) String bccEmailAddresses,
+                                               @RequestParam("subject") String subject,
+                                               @RequestParam("body") String bodyText,
+                                               @RequestParam(value = "files", required = false) List<MultipartFile> files,
+                                               @RequestParam("aAUid") String aAUid,
+                                               @RequestParam(value = "type", required = false) String type,
+                                               @RequestParam(value = "messageId", required = false) String messageId,
+                                               @RequestParam(value = "scheduleTime", required = false) String scheduleTime) {
+        log.info("Request to schedule send message");
+        try{
+            String accessToken = gmailUtility.getActiveAccountAccessToken(httpServletRequest, aAUid);
+            List<byte[]> attachmentsData = new ArrayList<>();
+            List<String> fileNames = new ArrayList<>();
+            if(files == null) files = new ArrayList<>();
+            // validation file size
+            for(MultipartFile multipartFile : files){
+                // check exceed maximum
+                if(multipartFile.getSize() > 25 * 1000 * 1000) throw new CustomErrorException(ErrorCode.EXCEED_ATTACHMENT_FILE_SIZE);
+                attachmentsData.add(multipartFile.getBytes()); // add attachment data
+                fileNames.add(multipartFile.getOriginalFilename()); // add attachment file name
+            }
+            // request dto setting
+            GmailMessageSendRequestWithAtt request = GmailMessageSendRequestWithAtt.builder()
+                    .toEmailAddresses(Arrays.asList(toEmailAddresses.split(",")))
+                    .ccEmailAddresses(ccEmailAddresses != null ? Arrays.asList(ccEmailAddresses.split(",")) : new ArrayList<>())
+                    .bccEmailAddresses(bccEmailAddresses != null ? Arrays.asList(bccEmailAddresses.split(",")) : new ArrayList<>())
+                    .subject(subject)
+                    .bodyText(bodyText)
+                    .sendType(type)
+                    .messageId(messageId)
+                    .build();
+            request.setFiles(attachmentsData);
+            request.setFileNames(fileNames);
+            // main logic
+            if(type.equals(SendType.NORMAL.getValue())){
+                gmailService.sendUserEmailMessageWithAtt(accessToken, request);
+            }else if(type.equals(SendType.REPLY.getValue())){
+                gmailService.sendEmailReply(accessToken, request);
+            }else if(type.equals(SendType.FORWARD.getValue())){
+                gmailService.sendEmailForwarding(accessToken, request);
+            }else{
+                throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE, "Invalid send type");
+            }
+            return new ResponseEntity<>(HttpStatus.CREATED);
+        }catch (Exception e){
+            throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE, e.getMessage());
+        }
+    }
+
     @GetMapping("/api/v1/gmail/drafts")
     public ResponseEntity<?> getDrafts(HttpServletRequest httpServletRequest,
                                                     @RequestParam(value = "pageToken", required = false) String pageToken,
@@ -273,7 +341,8 @@ public class GmailController {
                                                    @RequestParam("subject") String subject,
                                                    @RequestParam("body") String bodyText,
                                                    @RequestParam(value = "files", required = false) List<MultipartFile> files,
-                                                   @RequestParam("aAUid") String aAUid){
+                                                   @RequestParam("aAUid") String aAUid,
+                                                   @RequestParam(value = "threadId", required = false) String threadId){
         log.info("Request to create draft");
         try{
             List<File> attachments = new ArrayList<>();
@@ -299,6 +368,7 @@ public class GmailController {
                 attachments.add(tmpFile);
             }
             request.setFiles(attachments);
+            request.setThreadId(threadId);
             GmailDraftCreateResponse response = gmailService.createUserEmailDraft(accessToken, request);
             return new ResponseEntity<>(response, HttpStatus.CREATED);
         }catch (Exception e){

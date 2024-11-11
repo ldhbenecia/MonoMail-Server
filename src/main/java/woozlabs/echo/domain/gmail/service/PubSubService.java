@@ -115,11 +115,8 @@ public class PubSubService {
                         .putAllData(data)
                         .addAllTokens(fcmTokens)
                         .build();
-                System.out.println(data);
                 FirebaseMessaging.getInstance().sendEachForMulticastAsync(message);
             } catch (Exception e) {
-                e.printStackTrace();
-                System.out.println(e.getMessage());
                 throw new CustomErrorException(ErrorCode.FAILED_TO_GET_GMAIL_CONNECTION_REQUEST, ErrorCode.FAILED_TO_GET_GMAIL_CONNECTION_REQUEST.getMessage());
             }
         }
