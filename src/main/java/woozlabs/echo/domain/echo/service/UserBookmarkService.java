@@ -48,6 +48,34 @@ public class UserBookmarkService {
         accountRepository.save(account);
     }
 
+    @Transactional
+    public void createBookmarkList(String activeAccountUid, List<UserBookmarkDto> userBookmarkDtoList) {
+        Account account = accountRepository.findByUid(activeAccountUid)
+                .orElseThrow(() -> new CustomErrorException(ErrorCode.NOT_FOUND_ACCOUNT_ERROR_MESSAGE));
+
+        List<UserBookmark> newBookmarks = userBookmarkDtoList.stream()
+                .map(dto -> {
+                    boolean exists = userBookmarkRepository.findByAccountAndQuery(account, dto.getQuery())
+                            .isPresent();
+                    if (exists) {
+                        throw new CustomErrorException(ErrorCode.DUPLICATE_QUERY_ERROR_MESSAGE);
+                    }
+
+                    UserBookmark userBookmark = new UserBookmark();
+                    userBookmark.setAccount(account);
+                    userBookmark.setQuery(dto.getQuery());
+                    userBookmark.setTitle(dto.getTitle());
+                    userBookmark.setIcon(dto.getIcon());
+                    return userBookmark;
+                })
+                .collect(Collectors.toList());
+
+        userBookmarkRepository.saveAll(newBookmarks);
+
+        account.setHasBookmark(true);
+        accountRepository.save(account);
+    }
+
     public List<UserBookmarkDto> getBookmarkByaAUid(String activeAccountUid) {
         Account account = accountRepository.findByUid(activeAccountUid)
                 .orElseThrow(() -> new CustomErrorException(ErrorCode.NOT_FOUND_ACCOUNT_ERROR_MESSAGE));

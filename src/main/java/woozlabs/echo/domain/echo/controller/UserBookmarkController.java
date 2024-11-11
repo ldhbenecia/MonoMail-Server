@@ -34,6 +34,13 @@ public class UserBookmarkController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/bookmarks")
+    public ResponseEntity<Void> saveBookmarks(@RequestParam("aAUid") String activeAccountUid,
+                                              @RequestBody List<UserBookmarkDto> dtoList) {
+        userBookmarkService.createBookmarkList(activeAccountUid, dtoList);
+        return ResponseEntity.ok().build();
+    }
+
     @PatchMapping("/bookmark")
     public ResponseEntity<Void> updateBookmark(
             @RequestParam("aAUid") String activeAccountUid,
