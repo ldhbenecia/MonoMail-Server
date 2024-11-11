@@ -131,6 +131,10 @@ public class GmailController {
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
+//    @PutMapping("/api/v1/gmail/messages/{messageId}/draft/update")
+//    public ResponseEntity<?> updateDraft(HttpServletRequest httpServletRequest,
+
+
     @PatchMapping("/api/v1/gmail/messages/{messageId}/modify")
     public ResponseEntity<?> updateMessage(HttpServletRequest httpServletRequest,
                                            @PathVariable("messageId") String messageId,
@@ -189,6 +193,7 @@ public class GmailController {
             List<byte[]> attachmentsData = new ArrayList<>();
             List<String> fileNames = new ArrayList<>();
             if(files == null) files = new ArrayList<>();
+            if(type == null) type = SendType.NORMAL.getValue();
             // validation file size
             for(MultipartFile multipartFile : files){
                 // check exceed maximum
