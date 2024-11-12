@@ -445,12 +445,17 @@ public class GmailService {
             List<Draft> drafts = draftsResponse.getDrafts();
             drafts = isEmptyResult(drafts);
             List<GmailDraftListDrafts> detailedDrafts = getDetailedDrafts(drafts, gmailService); // get detailed threads
-            List<GmailThreadGetMessagesResponse> detailedDraftsMessages = detailedDrafts.stream().map(GmailDraftListDrafts::getMessage).toList();
+            List<GmailDraftDetailInList> responseDrafts = detailedDrafts.stream().map((detailedDraft) -> {
+                GmailDraftDetailInList responseDraft = new GmailDraftDetailInList();
+                responseDraft.setDraftId(detailedDraft.getId());
+                responseDraft.setMessage(detailedDraft.getMessage());
+                return responseDraft;
+            }).toList();
             if(pageToken != null){
                 validatePaymentDraft(detailedDrafts, currentDate);
             }
             return GmailDraftListResponse.builder()
-                    .drafts(detailedDraftsMessages)
+                    .drafts(responseDrafts)
                     .nextPageToken(draftsResponse.getNextPageToken())
                     .build();
         }catch (IOException e) {
@@ -775,14 +780,14 @@ public class GmailService {
                     .setHttpRequest(httpRequest)
                     .setName(taskName)
                     .build();
-            Instant delayTime = Instant.now().plusSeconds(5);
+            Instant delayTime = Instant.now().plusSeconds(10);
             com.google.protobuf.Timestamp scheduleTime = Timestamp.newBuilder()
                     .setSeconds(delayTime.getEpochSecond())
                     .setNanos(delayTime.getNano())
                     .build();
             taskBuilder.setScheduleTime(scheduleTime);
             // save request data in redis
-            ValueOperations<String, Object> ops = redisTemplate.opsForValue();;
+            ValueOperations<String, Object> ops = redisTemplate.opsForValue();
             ops.set(taskId, request);
             tasksClient.createTask(cloudTaskQueue, taskBuilder.build());
             log.info("Register lazy send message request to Cloud Task");
