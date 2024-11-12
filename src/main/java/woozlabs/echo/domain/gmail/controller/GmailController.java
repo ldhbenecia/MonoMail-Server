@@ -178,31 +178,22 @@ public class GmailController {
 
     @PostMapping("/api/v1/gmail/messages/send")
     public ResponseEntity<?> sendMessageWithAttachment(HttpServletRequest httpServletRequest,
-                                         @RequestParam("mailto") String toEmailAddresses,
-                                         @RequestParam(value = "cc", required = false) String ccEmailAddresses,
-                                         @RequestParam(value = "bcc", required = false) String bccEmailAddresses,
-                                         @RequestParam("subject") String subject,
-                                         @RequestParam("body") String bodyText,
-                                         @RequestParam(value = "files", required = false) List<MultipartFile> files,
-                                         @RequestParam("aAUid") String aAUid,
-                                         @RequestParam(value = "type", required = false) String type,
-                                         @RequestParam(value = "messageId", required = false) String messageId){
+                                         @RequestParam("aAUid") String aAUid, @RequestBody GmailMessageSendRequestByWebHook request){
         log.info("Request to send message");
         try{
             String accessToken = gmailUtility.getActiveAccountAccessToken(httpServletRequest, aAUid);
-            List<byte[]> attachmentsData = new ArrayList<>();
-            List<String> fileNames = new ArrayList<>();
-            if(files == null) files = new ArrayList<>();
-            if(type == null) type = SendType.NORMAL.getValue();
-            // validation file size
-            for(MultipartFile multipartFile : files){
-                // check exceed maximum
-                if(multipartFile.getSize() > 25 * 1000 * 1000) throw new CustomErrorException(ErrorCode.EXCEED_ATTACHMENT_FILE_SIZE);
-                attachmentsData.add(multipartFile.getBytes()); // add attachment data
-                fileNames.add(multipartFile.getOriginalFilename()); // add attachment file name
-            }
+            GmailMessageLazySendRequest lazySendRequest = gmailService.getLazySendRequestDto(request);
+            List<byte[]> attachmentsData = lazySendRequest.decodeFiles();
+            List<String> fileNames = lazySendRequest.getOriginalFileNames();
+            String toEmailAddresses = lazySendRequest.getToEmailAddresses();
+            String ccEmailAddresses = lazySendRequest.getCcEmailAddresses();
+            String bccEmailAddresses = lazySendRequest.getBccEmailAddresses();
+            String subject = lazySendRequest.getSubject();
+            String bodyText = lazySendRequest.getBody();
+            String type = lazySendRequest.getType();
+            String messageId = lazySendRequest.getMessageId();
             // request dto setting
-            GmailMessageSendRequestWithAtt request = GmailMessageSendRequestWithAtt.builder()
+            GmailMessageSendRequestWithAtt gmailMessageSendRequestWithAtt = GmailMessageSendRequestWithAtt.builder()
                     .toEmailAddresses(Arrays.asList(toEmailAddresses.split(",")))
                     .ccEmailAddresses(ccEmailAddresses != null ? Arrays.asList(ccEmailAddresses.split(",")) : new ArrayList<>())
                     .bccEmailAddresses(bccEmailAddresses != null ? Arrays.asList(bccEmailAddresses.split(",")) : new ArrayList<>())
@@ -211,15 +202,15 @@ public class GmailController {
                     .sendType(type)
                     .messageId(messageId)
                     .build();
-            request.setFiles(attachmentsData);
-            request.setFileNames(fileNames);
+            gmailMessageSendRequestWithAtt.setFiles(attachmentsData);
+            gmailMessageSendRequestWithAtt.setFileNames(fileNames);
             // main logic
             if(type.equals(SendType.NORMAL.getValue())){
-                gmailService.sendUserEmailMessageWithAtt(accessToken, request);
+                gmailService.sendUserEmailMessageWithAtt(accessToken, gmailMessageSendRequestWithAtt);
             }else if(type.equals(SendType.REPLY.getValue())){
-                gmailService.sendEmailReply(accessToken, request);
+                gmailService.sendEmailReply(accessToken, gmailMessageSendRequestWithAtt);
             }else if(type.equals(SendType.FORWARD.getValue())){
-                gmailService.sendEmailForwarding(accessToken, request);
+                gmailService.sendEmailForwarding(accessToken, gmailMessageSendRequestWithAtt);
             }else{
                 throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE, "Invalid send type");
             }
@@ -251,6 +242,14 @@ public class GmailController {
                                          @RequestParam(value = "type", required = false) String type,
                                          @RequestParam(value = "messageId", required = false) String messageId) {
         log.info("Request to lazy-send message");
+        if(files == null) files = new ArrayList<>();
+        if(type == null) type = SendType.NORMAL.getValue();
+        List<String> fileNames = new ArrayList<>();
+        for(MultipartFile multipartFile : files){
+            // check exceed maximum
+            if(multipartFile.getSize() > 25 * 1000 * 1000) throw new CustomErrorException(ErrorCode.EXCEED_ATTACHMENT_FILE_SIZE);
+            fileNames.add(multipartFile.getOriginalFilename()); // add attachment file name
+        }
         // request dto setting
         GmailMessageLazySendRequest request = GmailMessageLazySendRequest.builder()
                 .toEmailAddresses(toEmailAddresses)
@@ -259,12 +258,13 @@ public class GmailController {
                 .subject(subject)
                 .body(bodyText)
                 .files(files)
-                .aAUid(aAUid)
                 .type(type)
                 .messageId(messageId)
+                .originalFileNames(fileNames)
                 .build();
+        request.encodeFiles(); // encoding files
         // request send message to cloud task
-        GmailMessageLazySendResponse response = gmailService.sendMessageWithCloudTask(httpServletRequest, request);
+        GmailMessageLazySendResponse response = gmailService.sendMessageWithCloudTask(httpServletRequest, request, aAUid);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 

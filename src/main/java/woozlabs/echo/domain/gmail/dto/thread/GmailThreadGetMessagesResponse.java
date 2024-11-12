@@ -22,7 +22,7 @@ import static woozlabs.echo.global.utils.GlobalUtility.splitSenderData;
 @Slf4j
 @Data
 public class GmailThreadGetMessagesResponse {
-    private String id; // message id
+    private String id; // draft id
     private String subject;
     private Long timestamp;
     private String timezone = ""; // timezone

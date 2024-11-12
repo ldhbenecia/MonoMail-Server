@@ -26,6 +26,7 @@ import org.apache.commons.codec.binary.Base64;
 import org.apache.http.entity.BufferedHttpEntity;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.InputStreamEntity;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.http.util.EntityUtils;
 import org.jsoup.Jsoup;
@@ -34,6 +35,8 @@ import org.jsoup.nodes.Element;
 import org.springframework.batch.core.job.builder.JobBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -101,6 +104,7 @@ public class GmailService {
     private final GmailUtility gmailUtility;
     private final PubSubValidator pubSubValidator;
     private final AccountService accountService;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     public GmailThreadListResponse getQueryUserEmailThreads(String accessToken, String pageToken, Long maxResults, String q, String aAUid) {
         // last login update
@@ -369,6 +373,17 @@ public class GmailService {
         }
     }
 
+    public GmailMessageLazySendRequest getLazySendRequestDto(GmailMessageSendRequestByWebHook dto){
+        ValueOperations<String, Object> ops = redisTemplate.opsForValue();
+        GmailMessageLazySendRequest redisResponse = (GmailMessageLazySendRequest) ops.getAndDelete(dto.getTaskId());
+        if(redisResponse == null){
+            throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE,
+                    ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE.getMessage()
+            );
+        }
+        return redisResponse;
+    }
+
     public void sendScheduleEmail(GmailMessageSendRequestWithAtt request, LocalDateTime scheduleTime){
         // scheduling validation
         // create job
@@ -430,12 +445,17 @@ public class GmailService {
             List<Draft> drafts = draftsResponse.getDrafts();
             drafts = isEmptyResult(drafts);
             List<GmailDraftListDrafts> detailedDrafts = getDetailedDrafts(drafts, gmailService); // get detailed threads
-            List<GmailThreadGetMessagesResponse> detailedDraftsMessages = detailedDrafts.stream().map(GmailDraftListDrafts::getMessage).toList();
+            List<GmailDraftDetailInList> responseDrafts = detailedDrafts.stream().map((detailedDraft) -> {
+                GmailDraftDetailInList responseDraft = new GmailDraftDetailInList();
+                responseDraft.setDraftId(detailedDraft.getId());
+                responseDraft.setMessage(detailedDraft.getMessage());
+                return responseDraft;
+            }).toList();
             if(pageToken != null){
                 validatePaymentDraft(detailedDrafts, currentDate);
             }
             return GmailDraftListResponse.builder()
-                    .drafts(detailedDraftsMessages)
+                    .drafts(responseDrafts)
                     .nextPageToken(draftsResponse.getNextPageToken())
                     .build();
         }catch (IOException e) {
@@ -734,58 +754,47 @@ public class GmailService {
     }
 
     // cancel message test
-    public GmailMessageLazySendResponse sendMessageWithCloudTask(HttpServletRequest httpServletRequest, GmailMessageLazySendRequest request){
+    public GmailMessageLazySendResponse sendMessageWithCloudTask(HttpServletRequest httpServletRequest, GmailMessageLazySendRequest request, String aAUid){
         try{
             // create cloud task queue object
             CloudTasksClient tasksClient = CloudTasksClient.create(CloudTasksSettings.newBuilder()
                     .setCredentialsProvider(this::getDefaultServiceAccount)
                     .build());
             QueueName cloudTaskQueue = QueueName.of(projectId, locationId, queueId);
-            String url = String.format("https://api-dev.monomail.co/api/v1/gmail/messages/send?aAUid=%s", request.getAAUid());
-            if(request.getType() != null) url += "&type=" + request.getType();
-            if(request.getMessageId() != null) url += "&echoMessageId=" + request.getMessageId();
+            String url = String.format("https://0e97-114-199-145-53.ngrok-free.app/api/v1/gmail/messages/send?aAUid=%s", aAUid);
             // http request obj
-            System.out.println("111111");
-            InputStreamEntity entity = createMultipartPayload(request);
-            System.out.println("22222");
-            // build HTTP request with headers
-            HttpRequest.Builder httpRequestBuilder = HttpRequest.newBuilder()
+            String taskId = UUID.randomUUID() + "_" + aAUid;
+            String jsonPayload = "{\"taskId\":\"" + taskId + "\"}";
+            org.apache.http.HttpEntity entity = new StringEntity(jsonPayload, ContentType.APPLICATION_JSON);
+            HttpRequest httpRequest = HttpRequest.newBuilder()
+                    .setBody(ByteString.copyFromUtf8(jsonPayload))
                     .setUrl(url)
-                    .setHttpMethod(com.google.cloud.tasks.v2.HttpMethod.POST);
-            System.out.println("3333");
-            try (InputStream contentStream = entity.getContent()) {
-                byte[] payload = IOUtils.toByteArray(contentStream); // Apache Commons IO 사용
-                httpRequestBuilder.setBody(ByteString.copyFrom(java.util.Base64.getEncoder().encode(payload)));
-            }
-            System.out.println("4444");
+                    .putHeaders("Content-Type", entity.getContentType().getValue())
+                    .putHeaders("Authorization", httpServletRequest.getHeader("Authorization"))
+                    .build();
             // Config delay for the lazy sending email
             Task.Builder taskBuilder = Task.newBuilder();
-
-            // Add headers
-            httpRequestBuilder.putHeaders("Authorization", httpServletRequest.getHeader("Authorization"));
-            httpRequestBuilder.putHeaders("Content-Type", entity.getContentType().getValue());
-
             // Set the HTTP request in the task
-            String taskId = UUID.randomUUID() + "-" + request.getAAUid();
             String taskName = TaskName.of(projectId, locationId, queueId, taskId).toString();
             taskBuilder
-                    .setHttpRequest(httpRequestBuilder.build())
+                    .setHttpRequest(httpRequest)
                     .setName(taskName)
                     .build();
-            Instant delayTime = Instant.now().plusSeconds(30);
+            Instant delayTime = Instant.now().plusSeconds(10);
             com.google.protobuf.Timestamp scheduleTime = Timestamp.newBuilder()
                     .setSeconds(delayTime.getEpochSecond())
                     .setNanos(delayTime.getNano())
                     .build();
             taskBuilder.setScheduleTime(scheduleTime);
-            log.info("여기까지는 옴!!!!!");
+            // save request data in redis
+            ValueOperations<String, Object> ops = redisTemplate.opsForValue();
+            ops.set(taskId, request);
             tasksClient.createTask(cloudTaskQueue, taskBuilder.build());
             log.info("Register lazy send message request to Cloud Task");
             return GmailMessageLazySendResponse.builder()
                     .taskId(taskId)
                     .build();
         }catch (Exception e){
-            e.printStackTrace();
             throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_MESSAGES_SEND_API_ERROR_MESSAGE,
                     e.getMessage()
             );
@@ -827,43 +836,6 @@ public class GmailService {
         return GoogleCredentials.getApplicationDefault()
                 .createScoped("https://www.googleapis.com/auth/cloud-platform");
     }
-
-    private InputStreamEntity createMultipartPayload(GmailMessageLazySendRequest request) throws IOException {
-        // Create a multipart payload
-        MultipartEntityBuilder entityBuilder = MultipartEntityBuilder.create();
-        entityBuilder.addTextBody("mailto", request.getToEmailAddresses(), ContentType.TEXT_PLAIN);
-        entityBuilder.addTextBody("subject", request.getSubject(), ContentType.TEXT_PLAIN);
-        entityBuilder.addTextBody("body", request.getBody(), ContentType.TEXT_PLAIN);
-
-        if (request.getCcEmailAddresses() != null) {
-            entityBuilder.addTextBody("cc", request.getCcEmailAddresses(), ContentType.TEXT_PLAIN);
-        }
-        if (request.getBccEmailAddresses() != null) {
-            entityBuilder.addTextBody("bcc", request.getBccEmailAddresses(), ContentType.TEXT_PLAIN);
-        }
-        if (request.getFiles() != null) {
-            for (MultipartFile file : request.getFiles()) {
-                try {
-                    entityBuilder.addBinaryBody("files", file.getInputStream(), ContentType.DEFAULT_BINARY, file.getOriginalFilename());
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-
-        // Create a buffered entity to calculate content length and ensure Content-Type is set
-        org.apache.http.HttpEntity entity = entityBuilder.build();
-        org.apache.http.HttpEntity bufferedEntity = new BufferedHttpEntity(entity);
-
-        // Now pass the BufferedHttpEntity content and length to InputStreamEntity
-        InputStreamEntity inputStreamEntity = new InputStreamEntity(bufferedEntity.getContent(), bufferedEntity.getContentLength());
-
-        // Set Content-Type manually to avoid NullPointerException
-        inputStreamEntity.setContentType(bufferedEntity.getContentType().getValue());
-
-        return inputStreamEntity;
-    }
-
 
     private Boolean validateChangedSubject(String subject, String threadSubject) {
         if (subject.startsWith("Re: ")) {

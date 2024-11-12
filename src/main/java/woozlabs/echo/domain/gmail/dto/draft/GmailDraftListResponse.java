@@ -10,6 +10,6 @@ import java.util.List;
 @Getter
 @Builder
 public class GmailDraftListResponse implements ResponseDto {
-    private List<GmailThreadGetMessagesResponse> drafts;
+    private List<GmailDraftDetailInList> drafts;
     private String nextPageToken;
 }

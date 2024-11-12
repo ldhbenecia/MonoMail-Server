@@ -115,7 +115,6 @@ public class MultiThreadGmailService {
             //gmailThreadListThreads.setGoogleDriveAttachments(googleDriveAttachments.stream().distinct().toList());
             return gmailDraftListDrafts;
         } catch (IOException e) {
-            e.printStackTrace();
             throw new GmailException(e.getMessage());
         }
     }
