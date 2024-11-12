@@ -1,14 +1,17 @@
 package woozlabs.echo.domain.echo.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import woozlabs.echo.domain.member.entity.Account;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Collectors;
 
 @Entity
 @Getter
@@ -16,14 +19,12 @@ import java.util.stream.Collectors;
 @NoArgsConstructor
 public class EmailTemplate {
 
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String templateName;
     private String subject;
-
-    @OneToMany(mappedBy = "emailTemplate", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<EmailRecipient> recipients = new ArrayList<>();
 
     @Column(columnDefinition = "TEXT")
     private String body;
@@ -31,28 +32,4 @@ public class EmailTemplate {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "account_id")
     private Account account;
-
-    public List<EmailRecipient> getToRecipients() {
-        return recipients.stream()
-                .filter(r -> r.getType() == EmailRecipient.RecipientType.TO)
-                .collect(Collectors.toList());
-    }
-
-    public List<EmailRecipient> getCcRecipients() {
-        return recipients.stream()
-                .filter(r -> r.getType() == EmailRecipient.RecipientType.CC)
-                .collect(Collectors.toList());
-    }
-
-    public List<EmailRecipient> getBccRecipients() {
-        return recipients.stream()
-                .filter(r -> r.getType() == EmailRecipient.RecipientType.BCC)
-                .collect(Collectors.toList());
-    }
-
-    public void addRecipient(String email, EmailRecipient.RecipientType type) {
-        EmailRecipient recipient = new EmailRecipient(email, type);
-        recipient.setEmailTemplate(this);
-        this.recipients.add(recipient);
-    }
 }

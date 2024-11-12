@@ -1,20 +1,24 @@
 package woozlabs.echo.domain.echo.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import woozlabs.echo.domain.echo.dto.emailTemplate.CreateEmailTemplateRequest;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import woozlabs.echo.domain.echo.dto.emailTemplate.EmailTemplateRequest;
 import woozlabs.echo.domain.echo.dto.emailTemplate.EmailTemplateResponse;
-import woozlabs.echo.domain.echo.dto.emailTemplate.UpdateEmailTemplateRequest;
-import woozlabs.echo.domain.echo.entity.EmailTemplate;
 import woozlabs.echo.domain.echo.service.EmailTemplateService;
 import woozlabs.echo.global.constant.GlobalConstant;
 import woozlabs.echo.global.exception.CustomErrorException;
 import woozlabs.echo.global.exception.ErrorCode;
-
-import java.util.List;
 
 @Slf4j
 @RestController
@@ -38,10 +42,10 @@ public class EmailTemplateController {
 
     @PostMapping("/email-templates")
     public ResponseEntity<Void> createTemplate(HttpServletRequest httpServletRequest,
-                                                        @RequestBody CreateEmailTemplateRequest createEmailTemplateRequest) {
+                                               @RequestBody EmailTemplateRequest emailTemplateRequest) {
         String uid = (String) httpServletRequest.getAttribute(GlobalConstant.FIREBASE_UID_KEY);
         try {
-            emailTemplateService.createTemplate(uid, createEmailTemplateRequest);
+            emailTemplateService.createTemplate(uid, emailTemplateRequest);
             return ResponseEntity.status(201).build();
         } catch (Exception e) {
             log.error("Error occurred while creating email template for user with UID: {}", uid, e);
@@ -51,11 +55,11 @@ public class EmailTemplateController {
 
     @PutMapping("/email-templates/{templateId}")
     public ResponseEntity<Void> updateTemplate(HttpServletRequest httpServletRequest,
-                                                        @PathVariable("templateId") Long templateId,
-                                                        @RequestBody UpdateEmailTemplateRequest updateEmailTemplateRequest) {
+                                               @PathVariable("templateId") Long templateId,
+                                               @RequestBody EmailTemplateRequest emailTemplateRequest) {
         String uid = (String) httpServletRequest.getAttribute(GlobalConstant.FIREBASE_UID_KEY);
         try {
-            emailTemplateService.updateTemplate(uid, templateId, updateEmailTemplateRequest);
+            emailTemplateService.updateTemplate(uid, templateId, emailTemplateRequest);
             return ResponseEntity.ok().build();
         } catch (Exception e) {
             log.error("Error occurred while updating email template for user with UID: {}", uid, e);
