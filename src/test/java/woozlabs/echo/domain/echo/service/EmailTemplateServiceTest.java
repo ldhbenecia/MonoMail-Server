@@ -1,27 +1,27 @@
 package woozlabs.echo.domain.echo.service;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.argThat;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import woozlabs.echo.domain.echo.dto.emailTemplate.CreateEmailTemplateRequest;
+import woozlabs.echo.domain.echo.dto.emailTemplate.EmailTemplateRequest;
 import woozlabs.echo.domain.echo.dto.emailTemplate.EmailTemplateResponse;
-import woozlabs.echo.domain.echo.dto.emailTemplate.UpdateEmailTemplateRequest;
 import woozlabs.echo.domain.echo.entity.EmailTemplate;
 import woozlabs.echo.domain.echo.repository.EmailTemplateRepository;
 import woozlabs.echo.domain.member.entity.Account;
 import woozlabs.echo.domain.member.repository.AccountRepository;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class EmailTemplateServiceTest {
@@ -77,14 +77,11 @@ class EmailTemplateServiceTest {
     }
 
     @Test
-    public void createTemplateTest() throws Exception {
+    public void createTemplateTest() {
         // given
-        CreateEmailTemplateRequest request = new CreateEmailTemplateRequest();
+        EmailTemplateRequest request = new EmailTemplateRequest();
         request.setTemplateName("New Template");
         request.setSubject("New Subject");
-        request.setTo(Arrays.asList("to1@example.com", "to2@example.com"));
-        request.setCc(Arrays.asList("cc1@example.com", "cc2@example.com"));
-        request.setBcc(Arrays.asList("bcc1@example.com", "bcc2@example.com"));
         request.setBody("New Body");
 
         when(accountRepository.findByUid("1234567891")).thenReturn(Optional.of(account));
@@ -95,31 +92,18 @@ class EmailTemplateServiceTest {
         // then
         verify(emailTemplateRepository, times(1)).save(argThat(template ->
                 template.getTemplateName().equals("New Template") &&
-                template.getSubject().equals("New Subject") &&
-                template.getBody().equals("New Body") &&
-                template.getAccount().equals(account) &&
-                template.getRecipients().size() == 6 &&
-                template.getToRecipients().size() == 2 &&
-                template.getCcRecipients().size() == 2 &&
-                template.getBccRecipients().size() == 2 &&
-                template.getToRecipients().stream().anyMatch(r -> r.getEmail().equals("to1@example.com")) &&
-                template.getToRecipients().stream().anyMatch(r -> r.getEmail().equals("to2@example.com")) &&
-                template.getCcRecipients().stream().anyMatch(r -> r.getEmail().equals("cc1@example.com")) &&
-                template.getCcRecipients().stream().anyMatch(r -> r.getEmail().equals("cc2@example.com")) &&
-                template.getBccRecipients().stream().anyMatch(r -> r.getEmail().equals("bcc1@example.com")) &&
-                template.getBccRecipients().stream().anyMatch(r -> r.getEmail().equals("bcc2@example.com"))
+                        template.getSubject().equals("New Subject") &&
+                        template.getBody().equals("New Body") &&
+                        template.getAccount().equals(account)
         ));
     }
 
     @Test
     public void updateTemplateTest() throws Exception {
         // given
-        UpdateEmailTemplateRequest request = new UpdateEmailTemplateRequest();
+        EmailTemplateRequest request = new EmailTemplateRequest();
         request.setTemplateName("Updated Template");
         request.setSubject("Updated Subject");
-        request.setTo(Arrays.asList("to1@example.com", "to2@example.com"));
-        request.setCc(Arrays.asList("cc1@example.com", "cc2@example.com"));
-        request.setBcc(Arrays.asList("bcc1@example.com", "bcc2@example.com"));
         request.setBody("Updated Body");
 
         EmailTemplate existingTemplate = new EmailTemplate();
@@ -138,19 +122,9 @@ class EmailTemplateServiceTest {
         // then
         verify(emailTemplateRepository, times(1)).save(argThat(template ->
                 template.getTemplateName().equals("Updated Template") &&
-                template.getSubject().equals("Updated Subject") &&
-                template.getBody().equals("Updated Body") &&
-                template.getAccount().equals(account) &&
-                template.getRecipients().size() == 6 &&
-                template.getToRecipients().size() == 2 &&
-                template.getCcRecipients().size() == 2 &&
-                template.getBccRecipients().size() == 2 &&
-                template.getToRecipients().stream().anyMatch(r -> r.getEmail().equals("to1@example.com")) &&
-                template.getToRecipients().stream().anyMatch(r -> r.getEmail().equals("to2@example.com")) &&
-                template.getCcRecipients().stream().anyMatch(r -> r.getEmail().equals("cc1@example.com")) &&
-                template.getCcRecipients().stream().anyMatch(r -> r.getEmail().equals("cc2@example.com")) &&
-                template.getBccRecipients().stream().anyMatch(r -> r.getEmail().equals("bcc1@example.com")) &&
-                template.getBccRecipients().stream().anyMatch(r -> r.getEmail().equals("bcc2@example.com"))
+                        template.getSubject().equals("Updated Subject") &&
+                        template.getBody().equals("Updated Body") &&
+                        template.getAccount().equals(account)
         ));
     }
 
