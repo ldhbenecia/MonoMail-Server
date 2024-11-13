@@ -1,6 +1,7 @@
 package woozlabs.echo.domain.waitList;
 
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,7 +22,8 @@ public class WaitListController {
     }
 
     @PostMapping
-    public ResponseEntity<Void> addWaitList(@RequestBody EmailRequest emailRequest) {
+    public ResponseEntity<Void> addWaitList(@RequestBody EmailRequest emailRequest)
+            throws ExecutionException, InterruptedException {
         waitListService.addWaitList(emailRequest.getEmail());
         return ResponseEntity.ok().build();
     }

@@ -8,6 +8,7 @@ import com.google.cloud.firestore.QuerySnapshot;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -25,20 +26,24 @@ public class WaitListService {
         this.firestore = firestore;
     }
 
-    public void addWaitList(String email) {
+    public void addWaitList(String email) throws ExecutionException, InterruptedException {
         if (EmailValidator.isValidEmail(email)) {
+            // 이미 대기자 명단에 해당 이메일이 있는지 확인
+            ApiFuture<QuerySnapshot> future = firestore.collection("waitList")
+                    .whereEqualTo("email", email)
+                    .get();
+
+            QuerySnapshot querySnapshot = future.get();
+            if (!querySnapshot.isEmpty()) {
+                log.error("Email already exists in waitList: " + email);
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email already exists in wait list");
+            }
+
             WaitList waitList = new WaitList(email);
             waitList.setCreatedAt(new Date());
-
-            ApiFuture<DocumentReference> future = firestore.collection("waitList").add(waitList);
-
-            try {
-                DocumentReference docRef = future.get();
-                log.info("Email added to waitList with ID: " + docRef.getId());
-            } catch (Exception e) {
-                log.error("Error adding email to waitList: " + e.getMessage());
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error adding email to waitList");
-            }
+            ApiFuture<DocumentReference> addFuture = firestore.collection("waitList").add(waitList);
+            DocumentReference docRef = addFuture.get();
+            log.info("Email added to waitList with ID: " + docRef.getId());
         } else {
             log.error("Invalid email address: " + email);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid email address");
