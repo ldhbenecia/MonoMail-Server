@@ -874,14 +874,15 @@ public class GmailService {
                     });
                     return future;
                 }).toList();
-        return futures.stream().map((future) -> {
+        List<GmailThreadListThreads> getThreadsResult = futures.stream().map((future) -> {
             try{
                 return future.get();
             }catch (Exception e){
                 log.error(e.getMessage());
                 throw new GmailException(REQUEST_GMAIL_USER_MESSAGES_GET_API_ERR_MSG);
             }
-        }).collect(Collectors.toList());
+        }).toList();
+        return getThreadsResult.stream().filter((getThreadResult) -> !getThreadResult.getMessages().isEmpty()).toList();
     }
 
     private List<GmailDraftListDrafts> getDetailedDrafts(List<Draft> drafts, Gmail gmailService) {

@@ -32,6 +32,7 @@ public class GmailThreadGetMessagesResponse {
     private List<GmailThreadGetMessagesTo> to = new ArrayList<>();
     private String threadId; // thread id
     private List<String> labelIds;
+    private List<String> references = new ArrayList<>();
     private String snippet;
     private BigInteger historyId;
     private GmailThreadGetPayload payload;
@@ -106,6 +107,9 @@ public class GmailThreadGetMessagesResponse {
                 }case MESSAGE_PAYLOAD_HEADER_SUBJECT_KEY -> {
                     String subject = header.getValue();
                     gmailThreadGetMessages.setSubject(subject);
+                }case MESSAGE_PAYLOAD_HEADER_REFERENCE_KEY -> {
+                    String references = header.getValue();
+                    gmailThreadGetMessages.setReferences(Arrays.asList(references.split(" ")));
                 }
             }
         }

@@ -30,6 +30,7 @@ import static woozlabs.echo.global.constant.GlobalConstant.*;
 @Service
 @RequiredArgsConstructor
 public class MultiThreadGmailService {
+    private final String DRAFT_LABEL_ID = "DRAFT";
     public GmailThreadListThreads multiThreadRequestGmailThreadGetForList(Thread thread, Gmail gmailService){
         try {
             // init
@@ -42,16 +43,14 @@ public class MultiThreadGmailService {
             List<Message> messages = detailedThread.getMessages();
             Map<String, GmailThreadListAttachments> attachments = new HashMap<>();
             List<GmailThreadGetMessagesResponse> convertedMessages = new ArrayList<>();
-            List<String> labelIds = new ArrayList<>();
             for(int idx = 0;idx < messages.size();idx++){
                 int idxForLambda = idx;
                 Message message = messages.get(idx);
                 MessagePart payload = message.getPayload();
-                convertedMessages.add(GmailThreadGetMessagesResponse.toGmailThreadGetMessages(message));
+                GmailThreadGetMessagesResponse convertedMessage = GmailThreadGetMessagesResponse.toGmailThreadGetMessages(message);
                 List<MessagePartHeader> headers = payload.getHeaders(); // parsing header
-                labelIds.addAll(message.getLabelIds());
                 if(idxForLambda == messages.size()-1){
-                    Long date = convertedMessages.get(convertedMessages.size()-1).getTimestamp();
+                    Long date = convertedMessage.getTimestamp();
                     gmailThreadListThreads.setSnippet(message.getSnippet());
                     gmailThreadListThreads.setTimestamp(date);
                 }
@@ -64,6 +63,9 @@ public class MultiThreadGmailService {
                         gmailThreadListThreads.setSubject(header.getValue());
                     }
                 });
+                // (Checking) is it draft in threads
+                if(message.getLabelIds().contains(DRAFT_LABEL_ID)) continue;
+                convertedMessages.add(convertedMessage);
             }
             gmailThreadListThreads.setId(id);
             gmailThreadListThreads.setHistoryId(historyId);
