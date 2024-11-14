@@ -60,16 +60,6 @@ CREATE TABLE IF NOT EXISTS `email_template` (
     FOREIGN KEY (`account_id`) REFERENCES `account` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- Email Recipient
-CREATE TABLE IF NOT EXISTS `email_recipient` (
-    `id` BIGINT NOT NULL AUTO_INCREMENT,
-    `email_template_id` BIGINT,
-    `email` VARCHAR(255),
-    `type` ENUM('BCC','CC','TO'),
-    PRIMARY KEY (`id`),
-    FOREIGN KEY (`email_template_id`) REFERENCES `email_template` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB;
-
 -- bookmark
 CREATE TABLE IF NOT EXISTS `user_bookmark` (
     `id` BIGINT NOT NULL AUTO_INCREMENT,
