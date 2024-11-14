@@ -17,16 +17,20 @@ import java.util.LinkedList;
 public class RedisConfig {
     private final String host;
     private final int port;
+    private final String password;
     public RedisConfig(@Value("${spring.redis.host}") String host,
-                       @Value("${spring.redis.port}") int port){
+                       @Value("${spring.redis.port}") int port,
+                       @Value("${spring.redis.password}") String password){
         this.host = host;
         this.port = port;
+        this.password = password;
     }
     @Bean
     public RedisConnectionFactory redisConnectionFactory(){
         RedisStandaloneConfiguration redisStandaloneConfiguration = new RedisStandaloneConfiguration();
         redisStandaloneConfiguration.setHostName(host);
         redisStandaloneConfiguration.setPort(port);
+        redisStandaloneConfiguration.setPassword(password);
         return new LettuceConnectionFactory(redisStandaloneConfiguration);
     }
 

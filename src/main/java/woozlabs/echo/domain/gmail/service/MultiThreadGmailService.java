@@ -31,7 +31,7 @@ import static woozlabs.echo.global.constant.GlobalConstant.*;
 @RequiredArgsConstructor
 public class MultiThreadGmailService {
     private final String DRAFT_LABEL_ID = "DRAFT";
-    public GmailThreadListThreads multiThreadRequestGmailThreadGetForList(Thread thread, Gmail gmailService){
+    public GmailThreadListThreads multiThreadRequestGmailThreadGetForList(Thread thread, Gmail gmailService, Map<String, String> messageIdMapping){
         try {
             // init
             String id = thread.getId();
@@ -47,7 +47,8 @@ public class MultiThreadGmailService {
                 int idxForLambda = idx;
                 Message message = messages.get(idx);
                 MessagePart payload = message.getPayload();
-                GmailThreadGetMessagesResponse convertedMessage = GmailThreadGetMessagesResponse.toGmailThreadGetMessages(message);
+                GmailThreadGetMessagesResponse convertedMessage = GmailThreadGetMessagesResponse.toGmailThreadGetMessages(message, messageIdMapping);
+                convertedMessage.convertMessageIdInReference(messageIdMapping);
                 List<MessagePartHeader> headers = payload.getHeaders(); // parsing header
                 if(idxForLambda == messages.size()-1){
                     Long date = convertedMessage.getTimestamp();
@@ -86,7 +87,9 @@ public class MultiThreadGmailService {
                     .execute();
             Message message = detailedDraft.getMessage();
             Map<String, GmailThreadListAttachments> attachments = new HashMap<>();
-            GmailThreadGetMessagesResponse convertedMessage = GmailThreadGetMessagesResponse.toGmailThreadGetMessages(message); // convert message to dto
+            // 임시 추가
+            Map<String, String> messageIdMapping = new HashMap<>();
+            GmailThreadGetMessagesResponse convertedMessage = GmailThreadGetMessagesResponse.toGmailThreadGetMessages(message, messageIdMapping); // convert message to dto
             MessagePart payload = message.getPayload();
             List<MessagePartHeader> headers = payload.getHeaders(); // parsing header
             List<String> labelIds = message.getLabelIds();

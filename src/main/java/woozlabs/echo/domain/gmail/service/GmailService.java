@@ -140,11 +140,12 @@ public class GmailService {
         Map<String, GmailThreadListInlineImages> inlineImages = new HashMap<>();
         List<GmailThreadGetMessagesResponse> convertedMessages = new ArrayList<>();
         List<String> labelIds = new ArrayList<>();
+        Map<String, String> messageIdMapping = new HashMap<>();
         for (int idx = 0; idx < messages.size(); idx++) {
             int idxForLambda = idx;
             Message message = messages.get(idx);
             MessagePart payload = message.getPayload();
-            convertedMessages.add(GmailThreadGetMessagesResponse.toGmailThreadGetMessages(message));
+            convertedMessages.add(GmailThreadGetMessagesResponse.toGmailThreadGetMessages(message, messageIdMapping));
             List<MessagePartHeader> headers = payload.getHeaders(); // parsing header
             labelIds.addAll(message.getLabelIds());
             if (idxForLambda == messages.size() - 1) {
@@ -862,10 +863,11 @@ public class GmailService {
         List<CompletableFuture<GmailThreadListThreads>> futures = threads.stream()
                 .map((thread) -> {
                     CompletableFuture<GmailThreadListThreads> future = new CompletableFuture<>();
+                    Map<String, String> messageIdMapping = new HashMap<>();
                     executor.execute(() -> {
                         try{
                             GmailThreadListThreads result = multiThreadGmailService
-                                    .multiThreadRequestGmailThreadGetForList(thread, gmailService);
+                                    .multiThreadRequestGmailThreadGetForList(thread, gmailService, messageIdMapping);
                             future.complete(result);
                         }catch (Exception e){
                             log.error(REQUEST_GMAIL_USER_MESSAGES_GET_API_ERR_MSG);
