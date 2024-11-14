@@ -24,6 +24,8 @@ public final class GlobalConstant {
     public static final String MESSAGE_PAYLOAD_HEADER_CC_KEY = "CC";
     public static final String MESSAGE_PAYLOAD_HEADER_BCC_KEY = "BCC";
     public static final String MESSAGE_PAYLOAD_HEADER_TO_KEY = "TO";
+    public static final String MESSAGE_PAYLOAD_HEADER_REFERENCE_KEY = "REFERENCES";
+    public static final String MESSAGE_PAYLOAD_HEADER_MESSAGE_ID_KEY = "MESSAGE-ID";
     public static final String DELETED_MESSAGE_ALERT_MSG = "Not Found: Message(Reason: Deleted Message)";
     // Gmail threads
     public static final String THREAD_PAYLOAD_HEADER_SUBJECT_KEY = "SUBJECT";
