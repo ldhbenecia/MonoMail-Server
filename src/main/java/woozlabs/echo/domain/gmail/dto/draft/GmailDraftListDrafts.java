@@ -16,10 +16,10 @@ public class GmailDraftListDrafts {
     private BigInteger historyId;
     private List<String> labelIds;
     private int threadSize;
-    private List<GmailThreadGetMessagesFrom> from;
-    private List<GmailThreadGetMessagesCc> cc;
-    private List<GmailThreadGetMessagesBcc> bcc;
+    private List<GmailDraftGetMessagesFrom> from;
+    private List<GmailDraftGetMessagesCc> cc;
+    private List<GmailDraftGetMessagesBcc> bcc;
     private int attachmentSize;
     private Map<String, GmailThreadListAttachments> attachments;
-    private GmailThreadGetMessagesResponse message;
+    private GmailDraftGetMessageResponse message;
 }

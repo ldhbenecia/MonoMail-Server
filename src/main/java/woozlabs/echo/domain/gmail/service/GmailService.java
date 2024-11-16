@@ -1,6 +1,5 @@
 package woozlabs.echo.domain.gmail.service;
 
-import com.amazonaws.util.IOUtils;
 import com.google.api.client.googleapis.json.GoogleJsonResponseException;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.model.*;
@@ -23,17 +22,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.binary.Base64;
-import org.apache.http.entity.BufferedHttpEntity;
 import org.apache.http.entity.ContentType;
-import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.entity.mime.MultipartEntityBuilder;
-import org.apache.http.util.EntityUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.springframework.batch.core.job.builder.JobBuilder;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
@@ -46,7 +39,6 @@ import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.multipart.MultipartFile;
 import woozlabs.echo.domain.gmail.dto.autoForwarding.AutoForwardingResponse;
 import woozlabs.echo.domain.gmail.dto.draft.*;
 import woozlabs.echo.domain.gmail.dto.history.*;
@@ -75,7 +67,6 @@ import woozlabs.echo.global.utils.GlobalUtility;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.math.BigInteger;
 import java.time.*;
 import java.util.*;
@@ -468,9 +459,9 @@ public class GmailService {
         try{
             Gmail gmailService = gmailUtility.createGmailService(accessToken);
             Draft draft = getOneDraftResponse(id, gmailService);
-            GmailDraftGetMessage message = GmailDraftGetMessage.toGmailDraftGetMessages(draft.getMessage());
+            GmailDraftGetMessageResponse message = GmailDraftGetMessageResponse.toGmailDraftGetMessage(draft.getMessage());
             return GmailDraftGetResponse.builder()
-                    .id(draft.getId())
+                    .draftId(draft.getId())
                     .message(message)
                     .build();
         }catch (IOException e) {
@@ -485,10 +476,14 @@ public class GmailService {
         try{
             Gmail gmailService = gmailUtility.createGmailService(accessToken);
             Profile profile = gmailService.users().getProfile(USER_ID).execute();
+            // get existing draft
+            Draft previousDraft = gmailService.users().drafts().get(USER_ID, id).execute();
+            String previousThreadId = previousDraft.getMessage().getThreadId();
             String fromEmailAddress = profile.getEmailAddress();
             request.setFromEmailAddress(fromEmailAddress);
             MimeMessage mimeMessage = createDraft(request);
             Message message = createMessage(mimeMessage);
+            message.setThreadId(previousThreadId);
             // create new draft
             Draft draft = new Draft().setMessage(message);
             gmailService.users().drafts().update(USER_ID, id, draft).execute();
@@ -762,7 +757,7 @@ public class GmailService {
                     .setCredentialsProvider(this::getDefaultServiceAccount)
                     .build());
             QueueName cloudTaskQueue = QueueName.of(projectId, locationId, queueId);
-            String url = String.format("https://0e97-114-199-145-53.ngrok-free.app/api/v1/gmail/messages/send?aAUid=%s", aAUid);
+            String url = String.format("https://api-dev.monomail.co/api/v1/gmail/messages/send?aAUid=%s", aAUid);
             // http request obj
             String taskId = UUID.randomUUID() + "_" + aAUid;
             String jsonPayload = "{\"taskId\":\"" + taskId + "\"}";
@@ -936,7 +931,7 @@ public class GmailService {
         if(!detailedDrafts.isEmpty()){
             // get first thread date
             GmailDraftListDrafts firstDraft = detailedDrafts.get(0);
-            GmailThreadGetMessagesResponse draftMessage = firstDraft.getMessage(); // 분리 필요
+            GmailDraftGetMessageResponse draftMessage = firstDraft.getMessage(); // 분리 필요
             Long timeStamp = draftMessage.getTimestamp();
             // calc date 60 days ago
             Instant sixtyDaysAgoInstant = currentDate.minusDays(60).atStartOfDay(ZoneOffset.UTC).toInstant();

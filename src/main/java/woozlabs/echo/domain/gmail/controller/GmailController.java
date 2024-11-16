@@ -131,10 +131,6 @@ public class GmailController {
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
-//    @PutMapping("/api/v1/gmail/messages/{messageId}/draft/update")
-//    public ResponseEntity<?> updateDraft(HttpServletRequest httpServletRequest,
-
-
     @PatchMapping("/api/v1/gmail/messages/{messageId}/modify")
     public ResponseEntity<?> updateMessage(HttpServletRequest httpServletRequest,
                                            @PathVariable("messageId") String messageId,
@@ -330,6 +326,16 @@ public class GmailController {
         log.info("Request to get drafts");
         String accessToken = gmailUtility.getActiveAccountAccessToken(httpServletRequest, aAUid);
         GmailDraftListResponse response = gmailService.getUserEmailDrafts(accessToken, pageToken, maxResults, q);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @GetMapping("/api/v1/gmail/drafts/{draftId}")
+    public ResponseEntity<?> getDraft(HttpServletRequest httpServletRequest,
+                                      @RequestParam("aAUid") String aAUid,
+                                      @PathVariable("draftId") String draftId){
+        log.info("Request to get draft");
+        String accessToken = gmailUtility.getActiveAccountAccessToken(httpServletRequest, aAUid);
+        GmailDraftGetResponse response = gmailService.getUserEmailDraft(accessToken, draftId);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

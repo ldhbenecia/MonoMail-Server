@@ -8,5 +8,5 @@ import java.util.List;
 @Data
 public class GmailDraftDetailInList {
     private String draftId;
-    private GmailThreadGetMessagesResponse message;
+    private GmailDraftGetMessageResponse message;
 }
