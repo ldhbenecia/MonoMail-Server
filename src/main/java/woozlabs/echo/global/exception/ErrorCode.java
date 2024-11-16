@@ -63,6 +63,7 @@ public enum ErrorCode {
     REQUEST_GMAIL_USER_MESSAGES_MODIFY_API_ERROR_MESSAGE(500, "Failed to modify gmail messages api"),
     REQUEST_GMAIL_USER_MESSAGES_ATTACHMENTS_GET_API_ERROR_MESSAGE(500, "Failed to get gmail attachments api"),
     REQUEST_GMAIL_USER_DRAFTS_GET_API_ERROR_MESSAGE(500, "Failed to get gmail drafts api"),
+    REQUEST_GMAIL_USER_DRAFT_GET_API_ERROR_MESSAGE(500, "Failed to get gmail draft api"),
     REQUEST_GMAIL_USER_DRAFTS_CREATE_API_ERROR_MESSAGE(500, "Failed to create gmail drafts api"),
     REQUEST_GMAIL_USER_DRAFTS_UPDATE_API_ERROR_MESSAGE(500, "Failed to update gmail drafts api"),
     REQUEST_GMAIL_USER_STOP_API_ERROR_MESSAGE(500, "Failed to stop gmail api"),

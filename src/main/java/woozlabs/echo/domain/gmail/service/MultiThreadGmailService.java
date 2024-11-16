@@ -5,8 +5,7 @@ import com.google.api.services.gmail.model.*;
 import com.google.api.services.gmail.model.Thread;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import woozlabs.echo.domain.gmail.dto.draft.GmailDraftListAttachments;
-import woozlabs.echo.domain.gmail.dto.draft.GmailDraftListDrafts;
+import woozlabs.echo.domain.gmail.dto.draft.*;
 import woozlabs.echo.domain.gmail.dto.thread.GmailThreadGetMessagesBcc;
 import woozlabs.echo.domain.gmail.dto.thread.GmailThreadGetMessagesCc;
 import woozlabs.echo.domain.gmail.dto.thread.GmailThreadGetMessagesFrom;
@@ -89,7 +88,7 @@ public class MultiThreadGmailService {
             Map<String, GmailThreadListAttachments> attachments = new HashMap<>();
             // 임시 추가
             Map<String, String> messageIdMapping = new HashMap<>();
-            GmailThreadGetMessagesResponse convertedMessage = GmailThreadGetMessagesResponse.toGmailThreadGetMessages(message, messageIdMapping); // convert message to dto
+            GmailDraftGetMessageResponse convertedMessage = GmailDraftGetMessageResponse.toGmailDraftGetMessage(message); // convert message to dto
             MessagePart payload = message.getPayload();
             List<MessagePartHeader> headers = payload.getHeaders(); // parsing header
             List<String> labelIds = message.getLabelIds();
@@ -104,9 +103,9 @@ public class MultiThreadGmailService {
                     gmailDraftListDrafts.setSubject(header.getValue());
                 }
             });
-            List<GmailThreadGetMessagesFrom> froms = List.of(convertedMessage.getFrom());
-            List<GmailThreadGetMessagesCc> ccs = convertedMessage.getCc();
-            List<GmailThreadGetMessagesBcc> bccs = convertedMessage.getBcc();
+            List<GmailDraftGetMessagesFrom> froms = List.of(convertedMessage.getFrom());
+            List<GmailDraftGetMessagesCc> ccs = convertedMessage.getCc();
+            List<GmailDraftGetMessagesBcc> bccs = convertedMessage.getBcc();
             gmailDraftListDrafts.setLabelIds(labelIds.stream().distinct().collect(Collectors.toList()));
             gmailDraftListDrafts.setId(id);
             gmailDraftListDrafts.setFrom(froms.stream().distinct().toList());
