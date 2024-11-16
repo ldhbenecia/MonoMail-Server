@@ -471,8 +471,7 @@ public class GmailService {
         }
     }
 
-    @Async
-    public void updateUserEmailDraft(String accessToken, String id, GmailDraftCommonRequest request){
+    public GmailDraftUpdateResponse updateUserEmailDraft(String accessToken, String id, GmailDraftCommonRequest request){
         try{
             Gmail gmailService = gmailUtility.createGmailService(accessToken);
             Profile profile = gmailService.users().getProfile(USER_ID).execute();
@@ -486,7 +485,11 @@ public class GmailService {
             message.setThreadId(previousThreadId);
             // create new draft
             Draft draft = new Draft().setMessage(message);
-            gmailService.users().drafts().update(USER_ID, id, draft).execute();
+            draft = gmailService.users().drafts().update(USER_ID, id, draft).execute();
+            return GmailDraftUpdateResponse.builder()
+                    .draftId(draft.getId())
+                    .messageId(draft.getMessage().getId())
+                    .build();
         }catch (Exception e) {
             throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_DRAFTS_UPDATE_API_ERROR_MESSAGE,
                     e.getMessage()
@@ -494,7 +497,6 @@ public class GmailService {
         }
     }
 
-    //@Async
     public GmailDraftCreateResponse createUserEmailDraft(String accessToken, GmailDraftCommonRequest request){
         try{
             Gmail gmailService = gmailUtility.createGmailService(accessToken);
