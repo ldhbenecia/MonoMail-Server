@@ -4,7 +4,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
@@ -26,6 +28,12 @@ public class FeedbackController {
                                                @RequestPart(value = "attachment", required = false) MultipartFile attachment) {
         String uid = (String) httpServletRequest.getAttribute(GlobalConstant.FIREBASE_UID_KEY);
         feedbackService.createFeedback(uid, feedbackRequestDto, attachment);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{feedbackId}/resolve")
+    public ResponseEntity<Void> resolveFeedback(@PathVariable("feedbackId") String feedbackId) {
+        feedbackService.resolvedFeedback(feedbackId);
         return ResponseEntity.ok().build();
     }
 }

@@ -2,6 +2,7 @@ package woozlabs.echo.domain.feedback.service;
 
 import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.DocumentReference;
+import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Bucket;
@@ -46,7 +47,7 @@ public class FeedbackService {
             feedback.setCreatedAt(new Date());
             feedback.setResolved(false);
 
-            ApiFuture<DocumentReference> future = firestore.collection("feedbacks").add(feedback);
+            ApiFuture<DocumentReference> future = firestore.collection("feedback").add(feedback);
             DocumentReference documentReference = future.get();
             feedback.setId(documentReference.getId());
 
@@ -56,6 +57,27 @@ public class FeedbackService {
             slackNotificationService.sendSlackNotification(message, "mono-feedback-alert");
         } catch (Exception e) {
             throw new CustomErrorException(ErrorCode.FIREBASE_CREATE_FEEDBACK_ERROR, e.getMessage());
+        }
+    }
+
+    public void resolvedFeedback(String feedbackId) {
+        try {
+            DocumentReference feedbackRef = firestore.collection("feedback").document(feedbackId);
+            ApiFuture<DocumentSnapshot> future = feedbackRef.get();
+            DocumentSnapshot document = future.get();
+
+            if (!document.exists()) {
+                throw new CustomErrorException(ErrorCode.NOT_FOUND_FEEDBACK);
+            }
+
+            Feedback feedback = document.toObject(Feedback.class);
+            feedback.setResolved(true);
+            feedback.setResolvedTime(new Date());
+
+            feedbackRef.set(feedback);
+
+        } catch (Exception e) {
+            throw new CustomErrorException(ErrorCode.FIREBASE_UPDATE_FEEDBACK_ERROR, e.getMessage());
         }
     }
 }
