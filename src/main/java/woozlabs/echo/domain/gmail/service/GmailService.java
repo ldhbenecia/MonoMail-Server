@@ -1166,6 +1166,7 @@ public class GmailService {
         MimeBodyPart htmlPart = new MimeBodyPart();
         String bodyText = request.getBodyText();
         Document doc = Jsoup.parse(bodyText);
+        doc.outputSettings().charset("UTF-8");
         Element body = doc.body();
         List<GmailMessageInlineImage> base64Images = new ArrayList<>();
         Pattern pattern = Pattern.compile("data:(.*?);base64,([^\"']*)");
@@ -1183,7 +1184,7 @@ public class GmailService {
                 element.attr("src", "cid:image" + cidNum);
             }
         }
-        htmlPart.setContent(body.toString(), "text/html");
+        htmlPart.setContent(body.toString(), "text/html; charset=UTF-8");
         multipart.addBodyPart(htmlPart);
 
         for(File file : request.getFiles()){
