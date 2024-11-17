@@ -5,33 +5,28 @@ import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.QuerySnapshot;
-import com.slack.api.Slack;
-import com.slack.api.webhook.Payload;
-import com.slack.api.webhook.WebhookResponse;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import woozlabs.echo.global.utils.SlackNotificationService;
 
 @Slf4j
 @Service
 public class WaitListService {
 
     private final Firestore firestore;
-
-    @Value("${slack.webhook-url}")
-    private String slackWebHookUrl;
+    private final SlackNotificationService slackNotificationService;
 
     @Autowired
-    public WaitListService(Firestore firestore) {
+    public WaitListService(Firestore firestore, SlackNotificationService slackNotificationService) {
         this.firestore = firestore;
+        this.slackNotificationService = slackNotificationService;
     }
 
     public void addWaitList(String email) throws ExecutionException, InterruptedException {
@@ -53,7 +48,8 @@ public class WaitListService {
             DocumentReference docRef = addFuture.get();
             log.info("Email added to waitList with ID: " + docRef.getId());
 
-            sendSlackNotification(email);
+            String message = String.format("*%s* joined the waitlist! :tada:", email);
+            slackNotificationService.sendSlackNotification(message, "mono-waitlist-alert");
         } else {
             log.error("Invalid email address: " + email);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid email address");
@@ -73,27 +69,6 @@ public class WaitListService {
         } catch (Exception e) {
             log.error("Error getting wait list: " + e.getMessage());
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error getting wait list");
-        }
-    }
-
-    private void sendSlackNotification(String email) {
-        Slack slack = Slack.getInstance();
-        String message = String.format("*%s* joined the waitlist! :tada:", email);
-
-        Payload payload = Payload.builder()
-                .text(message)
-                .build();
-
-        try {
-            WebhookResponse webhookResponse = slack.send(slackWebHookUrl, payload);
-
-            if (webhookResponse.getCode() == 200) {
-                log.info("Slack notification sent successfully.");
-            } else {
-                log.error("Failed to send Slack notification: " + webhookResponse.getMessage());
-            }
-        } catch (IOException e) {
-            log.error("Error sending Slack notification: ", e);
         }
     }
 }
