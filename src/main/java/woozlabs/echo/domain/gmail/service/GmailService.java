@@ -217,7 +217,10 @@ public class GmailService {
         try{
             Gmail gmailService = gmailUtility.createGmailService(accessToken);
             Message message = gmailService.users().messages().get(USER_ID, messageId).execute();
-            return GmailMessageGetResponse.toGmailMessageGet(message, gmailUtility);
+            GmailMessageGetResponse response = GmailMessageGetResponse.toGmailMessageGet(message, gmailUtility);
+            GmailReferenceExtractionResponse references = extractReferences(message, gmailService);
+            response.setReferences(references.getReferences());
+            return response;
         }catch (IOException e) {
             throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_MESSAGES_GET_API_ERROR_MESSAGE, e.getMessage());
         }
@@ -1325,4 +1328,37 @@ public class GmailService {
         gmailService.users().settings().filters().create(USER_ID, filter).execute();
     }
 
+    private GmailReferenceExtractionResponse extractReferences(Message message, Gmail gmailService) {
+        try{
+            // init reference extraction dto
+            String messageId = message.getId();
+            GmailReferenceExtractionResponse response = new GmailReferenceExtractionResponse();
+            // get thread data
+            String threadId = message.getThreadId();
+            Thread thread = gmailService.users().threads()
+                    .get(USER_ID, threadId)
+                    .setFormat(THREADS_GET_METADATA_FORMAT)
+                    .setPrettyPrint(Boolean.TRUE)
+                    .execute();
+            // extraction reference data
+            List<Message> messages = thread.getMessages();
+            Map<String, String> messageIdMapping = new HashMap<>();
+            List<GmailReferenceExtraction> referenceExtractions = messages.stream().map((msg) -> {
+                GmailReferenceExtraction gmailReferenceExtraction = new GmailReferenceExtraction();
+                gmailReferenceExtraction.setGmailReferenceExtraction(msg, messageIdMapping);
+                return gmailReferenceExtraction;
+            }).toList();
+            for(GmailReferenceExtraction referenceExtraction : referenceExtractions){
+                if(referenceExtraction.getMessageId().equals(messageId)) {
+                    referenceExtraction.convertMessageIdInReference(messageIdMapping);
+                    response.setReferences(referenceExtraction.getReferences());
+                }
+            }
+            return response;
+        }catch (Exception e){
+            throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_THREADS_GET_API_ERROR_MESSAGE,
+                    ErrorCode.REQUEST_GMAIL_USER_THREADS_GET_API_ERROR_MESSAGE.getMessage()
+            );
+        }
+    }
 }

@@ -32,6 +32,7 @@ public class GmailMessageGetResponse implements ResponseDto {
     private List<GmailMessageGetTo> to = new ArrayList<>();
     private String threadId; // thread id
     private List<String> labelIds;
+    private List<String> references = new ArrayList<>();
     private String snippet;
     private BigInteger historyId;
     private GmailMessageGetPayload payload;
