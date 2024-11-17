@@ -24,6 +24,8 @@ public enum ErrorCode {
     FIREBASE_ACCOUNT_DELETION_ERROR(500, "Can not firebase account deleted"),
     FIREBASE_AUTH_ERROR(500, "Failed to create Firebase custom token"),
     FIREBASE_CREATE_FEEDBACK_ERROR(500, "Error creating feedback"),
+    NOT_FOUND_FEEDBACK(404, "Not found feedback"),
+    FIREBASE_UPDATE_FEEDBACK_ERROR(500, "Error updating feedback"),
 
     // account
     NOT_FOUND_ACCOUNT_ERROR_MESSAGE(404, "Not found: Account"),
