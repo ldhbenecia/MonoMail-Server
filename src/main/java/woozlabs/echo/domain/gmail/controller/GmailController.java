@@ -341,11 +341,11 @@ public class GmailController {
 
     @PostMapping("/api/v1/gmail/drafts/create")
     public ResponseEntity<?> createDraft(HttpServletRequest httpServletRequest,
-                                                   @RequestParam("mailto") String toEmailAddresses,
+                                                   @RequestParam(value = "mailto", required = false) String toEmailAddresses,
                                                    @RequestParam(value = "cc", required = false) String ccEmailAddresses,
                                                    @RequestParam(value = "bcc", required = false) String bccEmailAddresses,
-                                                   @RequestParam("subject") String subject,
-                                                   @RequestParam("body") String bodyText,
+                                                   @RequestParam(value = "subject", required = false) String subject,
+                                                   @RequestParam(value = "body", required = false) String bodyText,
                                                    @RequestParam(value = "files", required = false) List<MultipartFile> files,
                                                    @RequestParam("aAUid") String aAUid,
                                                    @RequestParam(value = "threadId", required = false) String threadId){
