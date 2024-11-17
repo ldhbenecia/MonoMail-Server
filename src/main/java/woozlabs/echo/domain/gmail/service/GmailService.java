@@ -296,19 +296,21 @@ public class GmailService {
                     .findFirst()
                     .map(MessagePartHeader::getValue)
                     .orElse("");
-            String originalMessageId = lastMessage.getPayload().getHeaders().stream()
-                    .filter(header -> header.getName().equalsIgnoreCase("Message-ID"))
-                    .findFirst()
-                    .map(MessagePartHeader::getValue)
-                    .orElse("");
+            String originalMessageId = "";
+            String originalReferences = "";
+            for(MessagePartHeader header : lastMessage.getPayload().getHeaders()){
+                if(header.getName().equalsIgnoreCase("Message-ID")){
+                    originalMessageId = header.getValue();
+                }else if(header.getName().equalsIgnoreCase("References")) {
+                    originalReferences = header.getValue();
+                }
+            }
             if(!validateChangedSubject(request.getSubject(), threadSubject)){ // send reply
                 request.setSubject(request.getSubject());
                 MimeMessage mimeMessage = createEmailWithAtt(request);
                 // 답장 관련 헤더 설정
-                if (!originalMessageId.isEmpty()) {
-                    mimeMessage.setHeader("In-Reply-To", originalMessageId);
-                    mimeMessage.setHeader("References", originalMessageId);
-                }
+                if (!originalMessageId.isEmpty()) mimeMessage.setHeader("In-Reply-To", originalMessageId);
+                if(!originalReferences.isEmpty()) mimeMessage.setHeader("References", originalReferences + " " + originalMessageId);
                 Message message = createMessage(mimeMessage);
                 message.setThreadId(lastMessage.getThreadId());
                 gmailService.users().messages().send(USER_ID, message).execute();
@@ -762,7 +764,7 @@ public class GmailService {
                     .setCredentialsProvider(this::getDefaultServiceAccount)
                     .build());
             QueueName cloudTaskQueue = QueueName.of(projectId, locationId, queueId);
-            String url = String.format("https://api-dev.monomail.co/api/v1/gmail/messages/send?aAUid=%s", aAUid);
+            String url = String.format("https://973b-61-75-13-118.ngrok-free.app/api/v1/gmail/messages/send?aAUid=%s", aAUid);
             // http request obj
             String taskId = UUID.randomUUID() + "_" + aAUid;
             String jsonPayload = "{\"taskId\":\"" + taskId + "\"}";
@@ -791,6 +793,7 @@ public class GmailService {
             ValueOperations<String, Object> ops = redisTemplate.opsForValue();
             ops.set(taskId, request);
             tasksClient.createTask(cloudTaskQueue, taskBuilder.build());
+            tasksClient.close();
             log.info("Register lazy send message request to Cloud Task");
             return GmailMessageLazySendResponse.builder()
                     .taskId(taskId)
