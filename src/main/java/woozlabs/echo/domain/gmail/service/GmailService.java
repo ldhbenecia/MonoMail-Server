@@ -217,7 +217,10 @@ public class GmailService {
         try{
             Gmail gmailService = gmailUtility.createGmailService(accessToken);
             Message message = gmailService.users().messages().get(USER_ID, messageId).execute();
-            return GmailMessageGetResponse.toGmailMessageGet(message, gmailUtility);
+            GmailMessageGetResponse response = GmailMessageGetResponse.toGmailMessageGet(message, gmailUtility);
+            GmailReferenceExtractionResponse references = extractReferences(message, gmailService);
+            response.setReferences(references.getReferences());
+            return response;
         }catch (IOException e) {
             throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_MESSAGES_GET_API_ERROR_MESSAGE, e.getMessage());
         }
@@ -293,19 +296,21 @@ public class GmailService {
                     .findFirst()
                     .map(MessagePartHeader::getValue)
                     .orElse("");
-            String originalMessageId = lastMessage.getPayload().getHeaders().stream()
-                    .filter(header -> header.getName().equalsIgnoreCase("Message-ID"))
-                    .findFirst()
-                    .map(MessagePartHeader::getValue)
-                    .orElse("");
+            String originalMessageId = "";
+            String originalReferences = "";
+            for(MessagePartHeader header : lastMessage.getPayload().getHeaders()){
+                if(header.getName().equalsIgnoreCase("Message-ID")){
+                    originalMessageId = header.getValue();
+                }else if(header.getName().equalsIgnoreCase("References")) {
+                    originalReferences = header.getValue();
+                }
+            }
             if(!validateChangedSubject(request.getSubject(), threadSubject)){ // send reply
                 request.setSubject(request.getSubject());
                 MimeMessage mimeMessage = createEmailWithAtt(request);
                 // 답장 관련 헤더 설정
-                if (!originalMessageId.isEmpty()) {
-                    mimeMessage.setHeader("In-Reply-To", originalMessageId);
-                    mimeMessage.setHeader("References", originalMessageId);
-                }
+                if (!originalMessageId.isEmpty()) mimeMessage.setHeader("In-Reply-To", originalMessageId);
+                if(!originalReferences.isEmpty()) mimeMessage.setHeader("References", originalReferences + " " + originalMessageId);
                 Message message = createMessage(mimeMessage);
                 message.setThreadId(lastMessage.getThreadId());
                 gmailService.users().messages().send(USER_ID, message).execute();
@@ -788,6 +793,7 @@ public class GmailService {
             ValueOperations<String, Object> ops = redisTemplate.opsForValue();
             ops.set(taskId, request);
             tasksClient.createTask(cloudTaskQueue, taskBuilder.build());
+            tasksClient.close();
             log.info("Register lazy send message request to Cloud Task");
             return GmailMessageLazySendResponse.builder()
                     .taskId(taskId)
@@ -1160,6 +1166,7 @@ public class GmailService {
         MimeBodyPart htmlPart = new MimeBodyPart();
         String bodyText = request.getBodyText();
         Document doc = Jsoup.parse(bodyText);
+        doc.outputSettings().charset("UTF-8");
         Element body = doc.body();
         List<GmailMessageInlineImage> base64Images = new ArrayList<>();
         Pattern pattern = Pattern.compile("data:(.*?);base64,([^\"']*)");
@@ -1177,7 +1184,7 @@ public class GmailService {
                 element.attr("src", "cid:image" + cidNum);
             }
         }
-        htmlPart.setContent(body.toString(), "text/html");
+        htmlPart.setContent(body.toString(), "text/html; charset=UTF-8");
         multipart.addBodyPart(htmlPart);
 
         for(File file : request.getFiles()){
@@ -1325,4 +1332,37 @@ public class GmailService {
         gmailService.users().settings().filters().create(USER_ID, filter).execute();
     }
 
+    private GmailReferenceExtractionResponse extractReferences(Message message, Gmail gmailService) {
+        try{
+            // init reference extraction dto
+            String messageId = message.getId();
+            GmailReferenceExtractionResponse response = new GmailReferenceExtractionResponse();
+            // get thread data
+            String threadId = message.getThreadId();
+            Thread thread = gmailService.users().threads()
+                    .get(USER_ID, threadId)
+                    .setFormat(THREADS_GET_METADATA_FORMAT)
+                    .setPrettyPrint(Boolean.TRUE)
+                    .execute();
+            // extraction reference data
+            List<Message> messages = thread.getMessages();
+            Map<String, String> messageIdMapping = new HashMap<>();
+            List<GmailReferenceExtraction> referenceExtractions = messages.stream().map((msg) -> {
+                GmailReferenceExtraction gmailReferenceExtraction = new GmailReferenceExtraction();
+                gmailReferenceExtraction.setGmailReferenceExtraction(msg, messageIdMapping);
+                return gmailReferenceExtraction;
+            }).toList();
+            for(GmailReferenceExtraction referenceExtraction : referenceExtractions){
+                if(referenceExtraction.getMessageId().equals(messageId)) {
+                    referenceExtraction.convertMessageIdInReference(messageIdMapping);
+                    response.setReferences(referenceExtraction.getReferences());
+                }
+            }
+            return response;
+        }catch (Exception e){
+            throw new CustomErrorException(ErrorCode.REQUEST_GMAIL_USER_THREADS_GET_API_ERROR_MESSAGE,
+                    ErrorCode.REQUEST_GMAIL_USER_THREADS_GET_API_ERROR_MESSAGE.getMessage()
+            );
+        }
+    }
 }
