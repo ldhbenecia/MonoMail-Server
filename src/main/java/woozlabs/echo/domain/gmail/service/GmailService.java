@@ -764,7 +764,7 @@ public class GmailService {
                     .setCredentialsProvider(this::getDefaultServiceAccount)
                     .build());
             QueueName cloudTaskQueue = QueueName.of(projectId, locationId, queueId);
-            String url = String.format("https://973b-61-75-13-118.ngrok-free.app/api/v1/gmail/messages/send?aAUid=%s", aAUid);
+            String url = String.format("https://api-dev.monomail.co/api/v1/gmail/messages/send?aAUid=%s", aAUid);
             // http request obj
             String taskId = UUID.randomUUID() + "_" + aAUid;
             String jsonPayload = "{\"taskId\":\"" + taskId + "\"}";
